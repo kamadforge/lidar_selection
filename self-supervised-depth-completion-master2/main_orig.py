@@ -180,13 +180,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         start = time.time()
         pred = model(batch_data)
-        im = batch_data['d'].detach().cpu().numpy()
-        im_sq = im.squeeze()
-        plt.figure()
-        plt.imshow(im_sq)
-        plt.show()
-        for i in range(im_sq.shape[0]):
-            print(f"{i} - {np.sum(im_sq[i])}")
+        # im = batch_data['d'].detach().cpu().numpy()
+        # im_sq = im.squeeze()
+        # plt.figure()
+        # plt.imshow(im_sq)
+        # plt.show()
+        # for i in range(im_sq.shape[0]):
+        #     print(f"{i} - {np.sum(im_sq[i])}")
 
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
         if mode == 'train':
