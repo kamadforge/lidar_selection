@@ -156,28 +156,34 @@ def depth_read(filename, depth_mode):
     torch.set_printoptions(profile="full")
     np.set_printoptions(precision=3, threshold=100000)
     assert os.path.exists(filename), "file not found: {}".format(filename)
-    print(filename)
+    #print(filename)
     img_file = Image.open(filename)
     depth_png = np.array(img_file, dtype=int)
     img_file.close()
     # make sure we have a proper 16bit depth map here.. not 8bit!
     assert np.max(depth_png) > 255, \
         "np.max(depth_png)={}, path={}".format(np.max(depth_png),filename)
-    print(depth_png[140][-100:])
+    #print(depth_png[140][-100:])
     depth = depth_png.astype(np.float) / 256.
     # depth[depth_png == 0] = -1.
     depth = np.expand_dims(depth, -1)
-    print(depth[140][-100:].squeeze())
+    #print(depth[140][-100:].squeeze())
 
     if depth_mode=="sparse":
         #alternative velodyne
-        print(filename)
+        #print(filename)
         path_main = filename[:47]
         folder1 = filename[74:84]
         folder2 = filename[74:100]
         file = filename[-14:-4]+".bin"
+        if "2011" not in folder1: # check workaround for if mode is train or val
+            path_main = filename[:47]
+            folder1 = filename[99:109]
+            folder2 = filename[99:125]
+            file = filename[-23:-13] + ".bin"
+
         path_binary = os.path.join(path_main, "data_rgb/all", folder1, folder2, "velodyne_points/data", file)
-        print("bin: ", path_binary)
+        #print("bin: ", path_binary)
 
         path_folder1 = os.path.join(path_main, "data_rgb/all", folder1)
 
@@ -202,9 +208,21 @@ def depth_read(filename, depth_mode):
                                                                           vc_path=v2c_filepath,
                                                                           cc_path=c2c_filepath, mode=mode)
         inds = np.where((coords_[1] >= 139) & (coords_[1] <= 141) & (coords_[0] > 1300))
-        print(coords_[:, inds])
-        print(pt_dep[inds])
+        #print(coords_[:, inds])
+        #print(pt_dep[inds])
         dummy = 1
+
+        # copying and pruning (last condition)
+        # important_lines = [300, 301, 302]
+        depth_bin = np.zeros_like(depth)
+        for i in range(len(coords_[0])):
+            hor = int(np.floor(coords_[0][i]))
+            ver = int(np.floor(coords_[1][i]))
+            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[
+                0]:  # and line_c[i] in important_lines:
+                depth_bin[ver, hor] = pt_dep[i]
+
+        depth = depth_bin
 
 
 
