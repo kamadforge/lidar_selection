@@ -10,6 +10,7 @@ from PIL import Image
 import torch
 import torch.utils.data as data
 import cv2
+import socket
 from dataloaders import transforms
 from dataloaders.pose_estimator import get_pose_pnp
 
@@ -169,18 +170,35 @@ def depth_read(filename, depth_mode):
     depth = np.expand_dims(depth, -1)
     #print(depth[140][-100:].squeeze())
 
+
+
     if depth_mode=="sparse":
         #alternative velodyne
         #print(filename)
-        path_main = filename[:47]
-        folder1 = filename[74:84]
-        folder2 = filename[74:100]
-        file = filename[-14:-4]+".bin"
-        if "2011" not in folder1: # check workaround for if mode is train or val
+        
+        if socket.gethostname()!='kamilblade':
+           
+            path_main = filename[:31]
+            folder1 = filename[58:68]
+            folder2 = filename[58:84]
+            file = filename[-14:-4]+".bin"
+            if "2011" not in folder1: # check workaround for if mode is train or val
+                path_main = filename[:31]
+                folder1 = filename[83:93]
+                folder2 = filename[83:109]
+                file = filename[-23:-13] + ".bin"
+                
+        else:
+        
             path_main = filename[:47]
-            folder1 = filename[99:109]
-            folder2 = filename[99:125]
-            file = filename[-23:-13] + ".bin"
+            folder1 = filename[74:84]
+            folder2 = filename[74:100]
+            file = filename[-14:-4]+".bin"
+            if "2011" not in folder1: # check workaround for if mode is train or val
+                path_main = filename[:47]
+                folder1 = filename[99:109]
+                folder2 = filename[99:125]
+                file = filename[-23:-13] + ".bin"
 
         path_binary = os.path.join(path_main, "data_rgb/all", folder1, folder2, "velodyne_points/data", file)
         #print("bin: ", path_binary)
