@@ -222,6 +222,7 @@ def depth_read(filename, depth_mode):
                 0]:  # and line_c[i] in important_lines:
                 depth_bin[ver, hor] = pt_dep[i]
 
+        #print("getting bin data")
         depth = depth_bin
 
 
