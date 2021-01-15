@@ -7,8 +7,9 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 
+
 from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNet, DepthCompletionNetQ
+from model import DepthCompletionNet, DepthCompletionNetQ, DepthCompletionNetQSquare
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -20,7 +21,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
-                    default=4,
+                    default=0,
                     type=int,
                     metavar='N',
                     help='number of data loading workers (default: 4)')
@@ -244,8 +245,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
+            print("*************swiches:")
             print(model.module.parameter)
-            print(torch.argsort(model.module.parameter))
+            #print(torch.argsort(model.module.parameter))
+            dummy=1
 
         # measure accuracy and record loss
         with torch.no_grad():
@@ -317,7 +320,7 @@ def main():
             return
 
     print("=> creating model and optimizer ... ", end='')
-    model = DepthCompletionNetQ(args).to(device)
+    model = DepthCompletionNetQSquare(args).to(device)
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]
