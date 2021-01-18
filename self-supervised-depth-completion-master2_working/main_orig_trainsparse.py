@@ -180,7 +180,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         start = time.time()
 
-        prune_lines=True
+        prune_lines=False
         if prune_lines:
             lines_unmasked=[300,301,302]
             lines_all=np.arange(352)
@@ -264,19 +264,20 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-    avg = logger.conditional_save_info(mode, average_meter, epoch)
-    is_best = logger.rank_conditional_save_best(mode, avg, epoch)
-    if is_best and not (mode == "train"):
-        logger.save_img_comparison_as_best(mode, epoch)
-    logger.conditional_summarize(mode, avg, is_best)
+        if i % 100 ==0: #every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
+            avg = logger.conditional_save_info(mode, average_meter, epoch)
+            is_best = logger.rank_conditional_save_best(mode, avg, epoch)
+            if is_best and not (mode == "train"):
+                logger.save_img_comparison_as_best(mode, epoch)
+            logger.conditional_summarize(mode, avg, is_best)
 
-    helper.save_checkpoint({  # save checkpoint
-        'epoch': epoch,
-        'model': model.module.state_dict(),
-        'best_result': logger.best_result,
-        'optimizer': optimizer.state_dict(),
-        'args': args,
-    }, is_best, epoch, logger.output_directory)
+            helper.save_checkpoint({  # save checkpoint
+                'epoch': epoch,
+                'model': model.module.state_dict(),
+                'best_result': logger.best_result,
+                'optimizer': optimizer.state_dict(),
+                'args': args,
+            }, is_best, epoch, logger.output_directory)
 
     return avg, is_best
 
