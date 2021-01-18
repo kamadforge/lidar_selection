@@ -222,7 +222,7 @@ class DepthCompletionNetQ(nn.Module):
 
         num = 352
         num = 65
-        self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
+        self.parameter = Parameter(-1e-10 * torch.ones((num)), requires_grad=True)
         self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
 
         if 'd' in self.modality:
@@ -320,32 +320,22 @@ class DepthCompletionNetQ(nn.Module):
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
         S = phi / torch.sum(phi)
-        # print(S)
 
         # Slen=len(S)
         # S_expand = S.repeat(x['d'].shape[-1]).reshape(Slen, x['d'].shape[-1])
         # output = x['d'] * S_expand
 
+        # switch mask
         S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])
         print(S_mask_ext[24][308][733])
         S_mask = torch.max(S_mask_ext, 0)[0]
 
-        S_mask_ind = torch.max(S_mask_ext, 0)[1]
-
-        # print(S_mask_ind[250])
-
         # for i in range(len(self.parameter)):
         #     print(f"{i}: {len(np.where(S_mask_ind.detach().cpu().numpy() == i)[0])}")
-
-        # print(imp_lines[1])
-        # print(imp_lines[40])
-
-        # print(imp_lines[250])
-        # print(imp_lines[300])
-
-        # print(S_mask.shape)
-        # print(x['d'].shape)
         output = x['d'] * S_mask
+
+
+
 
 
         # first layer
@@ -564,6 +554,198 @@ class DepthCompletionNetQFit(nn.Module):
         # output = x['d'] * S
 
         #################3
+
+        # first layer
+        if 'd' in self.modality:
+            conv1_d = self.conv1_d(output)
+        if 'rgb' in self.modality:
+            conv1_img = self.conv1_img(x['rgb'])
+        elif 'g' in self.modality:
+            conv1_img = self.conv1_img(x['g'])
+
+        if self.modality == 'rgbd' or self.modality == 'gd':
+            conv1 = torch.cat((conv1_d, conv1_img), 1)
+        else:
+            conv1 = conv1_d if (self.modality == 'd') else conv1_img
+
+        conv2 = self.conv2(conv1)
+        conv3 = self.conv3(conv2)  # batchsize * ? * 176 * 608
+        conv4 = self.conv4(conv3)  # batchsize * ? * 88 * 304
+        conv5 = self.conv5(conv4)  # batchsize * ? * 44 * 152
+        conv6 = self.conv6(conv5)  # batchsize * ? * 22 * 76
+
+        # decoder
+        convt5 = self.convt5(conv6)
+        y = torch.cat((convt5, conv5), 1)
+
+        convt4 = self.convt4(y)
+        y = torch.cat((convt4, conv4), 1)
+
+        convt3 = self.convt3(y)
+        y = torch.cat((convt3, conv3), 1)
+
+        convt2 = self.convt2(y)
+        y = torch.cat((convt2, conv2), 1)
+
+        convt1 = self.convt1(y)
+        y = torch.cat((convt1, conv1), 1)
+
+        y = self.convtf(y)
+
+        if self.training:
+            return 100 * y
+        else:
+            min_distance = 0.9
+            return F.relu(
+                100 * y - min_distance
+            ) + min_distance  # the minimum range of Velodyne is around 3 feet ~= 0.9m
+
+
+
+class DepthCompletionNetQSquare(nn.Module):
+    def __init__(self, args):
+        assert (
+            args.layers in [18, 34, 50, 101, 152]
+        ), 'Only layers 18, 34, 50, 101, and 152 are defined, but got {}'.format(
+            layers)
+        super(DepthCompletionNetQSquare, self).__init__()
+        self.modality = args.input
+
+        self.img_height=352
+        self.img_width=1216
+        self.bin_ver = np.arange(0, self.img_height, 40)
+        self.bin_ver = np.append(self.bin_ver, self.img_height)
+        self.bin_hor = np.arange(0, self.img_width, 40)
+        self.bin_hor = np.append(self.bin_hor, self.img_width)
+
+        num = 352
+        num = 65
+        #self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
+        self.parameter = Parameter(-1e-10 * torch.ones(len(self.bin_ver)-1 , len(self.bin_hor)-1))
+        #self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
+
+        if 'd' in self.modality:
+            channels = 64 // len(self.modality)
+            self.conv1_d = conv_bn_relu(1,
+                                        channels,
+                                        kernel_size=3,
+                                        stride=1,
+                                        padding=1)
+        if 'rgb' in self.modality:
+            channels = 64 * 3 // len(self.modality)
+            self.conv1_img = conv_bn_relu(3,
+                                          channels,
+                                          kernel_size=3,
+                                          stride=1,
+                                          padding=1)
+        elif 'g' in self.modality:
+            channels = 64 // len(self.modality)
+            self.conv1_img = conv_bn_relu(1,
+                                          channels,
+                                          kernel_size=3,
+                                          stride=1,
+                                          padding=1)
+
+        pretrained_model = resnet.__dict__['resnet{}'.format(
+            args.layers)](pretrained=args.pretrained)
+        if not args.pretrained:
+            pretrained_model.apply(init_weights)
+        #self.maxpool = pretrained_model._modules['maxpool']
+        self.conv2 = pretrained_model._modules['layer1']
+        self.conv3 = pretrained_model._modules['layer2']
+        self.conv4 = pretrained_model._modules['layer3']
+        self.conv5 = pretrained_model._modules['layer4']
+        del pretrained_model  # clear memory
+
+        # define number of intermediate channels
+        if args.layers <= 34:
+            num_channels = 512
+        elif args.layers >= 50:
+            num_channels = 2048
+        self.conv6 = conv_bn_relu(num_channels,
+                                  512,
+                                  kernel_size=3,
+                                  stride=2,
+                                  padding=1)
+
+        # decoding layers
+        kernel_size = 3
+        stride = 2
+        self.convt5 = convt_bn_relu(in_channels=512,
+                                    out_channels=256,
+                                    kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=1,
+                                    output_padding=1)
+        self.convt4 = convt_bn_relu(in_channels=768,
+                                    out_channels=128,
+                                    kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=1,
+                                    output_padding=1)
+        self.convt3 = convt_bn_relu(in_channels=(256 + 128),
+                                    out_channels=64,
+                                    kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=1,
+                                    output_padding=1)
+        self.convt2 = convt_bn_relu(in_channels=(128 + 64),
+                                    out_channels=64,
+                                    kernel_size=kernel_size,
+                                    stride=stride,
+                                    padding=1,
+                                    output_padding=1)
+        self.convt1 = convt_bn_relu(in_channels=128,
+                                    out_channels=64,
+                                    kernel_size=kernel_size,
+                                    stride=1,
+                                    padding=1)
+        self.convtf = conv_bn_relu(in_channels=128,
+                                   out_channels=1,
+                                   kernel_size=1,
+                                   stride=1,
+                                   bn=False,
+                                   relu=False)
+
+    def forward(self, x):
+
+        pre_phi = self.parameter
+        # print(self.parameter)
+        phi = F.softplus(self.parameter)
+
+        #if any(torch.isnan(phi)):
+        if any(torch.flatten(torch.isnan(phi))):
+            print("some Phis are NaN")
+        # it looks like too large values are making softplus-transformed values very large and returns NaN.
+        # this occurs when optimizing with a large step size (or/and with a high momentum value)
+
+        S = phi / torch.sum(phi)
+
+        # Slen=len(S)
+        # S_expand = S.repeat(x['d'].shape[-1]).reshape(Slen, x['d'].shape[-1])
+        # output = x['d'] * S_expand
+
+        # switch mask
+        # S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])
+        # print(S_mask_ext[24][308][733])
+        # S_mask = torch.max(S_mask_ext, 0)[0]
+        # # for i in range(len(self.parameter)):
+        # #     print(f"{i}: {len(np.where(S_mask_ind.detach().cpu().numpy() == i)[0])}")
+        # print(x['d'].shape)
+        # output = x['d'] * S_mask
+
+        #switch many features
+        mask = torch.zeros((self.img_height, self.img_width)).to(device)
+        for i in range(len(self.bin_ver)-1):
+            for j in range(len(self.bin_hor)-1):
+                # print(self.bin_hor[i])
+                # print(self.bin_hor[i+1])
+                # print(self.bin_hor[j])
+                # print(self.bin_hor[j+1])
+                mask[self.bin_hor[i]:self.bin_hor[i+1], self.bin_hor[j]:self.bin_hor[j+1]]=self.parameter[i,j]
+        output = x['d'] * mask
+
+
 
         # first layer
         if 'd' in self.modality:

@@ -13,11 +13,14 @@ import cv2
 import socket
 from dataloaders import transforms
 from dataloaders.pose_estimator import get_pose_pnp
+from scipy.stats import binned_statistic_2d
 
 # binary file read
 from run_batch_kitti_pt_line_repro import load_from_bin, velo_points_filter, velo3d_2_camera2d_points, calib_oxts2velo, velo_point_rectify_egomotion, ego_motion_compute_each_lidar_scan
 
 input_options = ['d', 'rgb', 'rgbd', 'g', 'gd']
+
+
 
 
 def load_calib():
@@ -149,6 +152,17 @@ def rgb_read(filename):
     img_file.close()
     return rgb_png
 
+oheight, owidth = 352, 1216
+SIZE=40
+bin_ver2 = np.arange(0, oheight, SIZE)
+bin_ver2 = np.append(bin_ver2, oheight)
+bin_hor2 =np.arange(0, owidth, SIZE)
+bin_hor2 = np.append(bin_hor2, owidth)
+#global params
+params = np.zeros((len(bin_ver2)-1, len(bin_hor2)-1))
+
+values1  = []
+np.save("value.npy", values1)
 
 def depth_read(filename, depth_mode):
     # loads depth map D from png file
@@ -231,24 +245,56 @@ def depth_read(filename, depth_mode):
         dummy = 1
 
         # copying and pruning (last condition)
-        # important_lines = [300, 301, 302]
+        #important_lines = [30,  7, 17, 20,  2,  1,  3,  4]
+        important_lines = np.arange(65)
         depth_bin = np.zeros_like(depth)
         for i in range(len(coords_[0])):
             hor = int(np.floor(coords_[0][i]))
             ver = int(np.floor(coords_[1][i]))
-            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[
-                0]:  # and line_c[i] in important_lines:
+            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0] and line_c[i] in important_lines:
                 depth_bin[ver, hor] = pt_dep[i]
 
         #print("getting bin data")
         depth = depth_bin
 
+        depth_points = np.where(depth>0)
+
+        #depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
+
+
+        #binning
+        size_of_bin = 40
+        print(depth.shape)
+        bin_ver=np.arange(0, oheight, size_of_bin)
+        bin_ver=np.append(bin_ver, oheight)
+        bin_hor=np.arange(0, owidth, size_of_bin)
+        bin_hor = np.append(bin_hor, owidth)
+        values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]] # look at pixels with non-0 depth
+        #bin function
+        bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range= [[0, owidth], [0, oheight]])
+        print("bins shape", bins_2d_depth.statistic.shape)
+
+        #print(params)
+
+        if os.path.isfile("value.npy"):
+            values1 = np.load("value.npy")
+        else:
+            values1  = []
+        if len(values1)==0:
+            values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
+        else:
+            values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
+        np.save("value.npy", values1)
+        print(values1.shape)
+        print(np.mean(values1, axis=0))
+        del values1
 
 
     return depth #375, 1242 #376, 1241
 
 
-oheight, owidth = 352, 1216
+
+
 
 
 def drop_depth_measurements(depth, prob_keep):

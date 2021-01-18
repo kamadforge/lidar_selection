@@ -169,123 +169,120 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     for i, batch_data in enumerate(loader):
         #print(i)
 
-        if 1:
-            start = time.time()
-            batch_data = {
-                key: val.to(device)
-                for key, val in batch_data.items() if val is not None
-            }
-            gt = batch_data[
-                'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
-            data_time = time.time() - start
 
-            start = time.time()
-            pred = model(batch_data)
+        start = time.time()
+        batch_data = {
+            key: val.to(device)
+            for key, val in batch_data.items() if val is not None
+        }
+        gt = batch_data[
+            'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+        data_time = time.time() - start
 
-            pm = model.module.parameter_mask.detach().cpu().numpy()
+        start = time.time()
+        pred = model(batch_data)
 
+        #im = batch_data['d'].detach().cpu().numpy()
+        #im_sq = im.squeeze()
+        #plt.figure()
+        #plt.imshow(im_sq)
+        #plt.show()
+        #for i in range(im_sq.shape[0]):
+        #    print(f"{i} - {np.sum(im_sq[i])}")
 
-            #im = batch_data['d'].detach().cpu().numpy()
-            #im_sq = im.squeeze()
-            #plt.figure()
-            #plt.imshow(im_sq)
-            #plt.show()
-            #for i in range(im_sq.shape[0]):
-            #    print(f"{i} - {np.sum(im_sq[i])}")
+        depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
+        if mode == 'train':
+            # Loss 1: the direct depth supervision from ground truth label
+            # mask=1 indicates that a pixel does not ground truth labels
+            if 'sparse' in args.train_mode:
+                depth_loss = depth_criterion(pred, batch_data['d'])
+                mask = (batch_data['d'] < 1e-3).float()
+            elif 'dense' in args.train_mode:
+                depth_loss = depth_criterion(pred, gt)
+                mask = (gt < 1e-3).float()
 
-            depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
-            if mode == 'train':
-                # Loss 1: the direct depth supervision from ground truth label
-                # mask=1 indicates that a pixel does not ground truth labels
-                if 'sparse' in args.train_mode:
-                    depth_loss = depth_criterion(pred, batch_data['d'])
-                    mask = (batch_data['d'] < 1e-3).float()
-                elif 'dense' in args.train_mode:
-                    depth_loss = depth_criterion(pred, gt)
-                    mask = (gt < 1e-3).float()
+            # Loss 2: the self-supervised photometric loss
+            if args.use_pose:
+                # create multi-scale pyramids
+                pred_array = helper.multiscale(pred)
+                rgb_curr_array = helper.multiscale(batch_data['rgb'])
+                rgb_near_array = helper.multiscale(batch_data['rgb_near'])
+                if mask is not None:
+                    mask_array = helper.multiscale(mask)
+                num_scales = len(pred_array)
 
-                # Loss 2: the self-supervised photometric loss
-                if args.use_pose:
-                    # create multi-scale pyramids
-                    pred_array = helper.multiscale(pred)
-                    rgb_curr_array = helper.multiscale(batch_data['rgb'])
-                    rgb_near_array = helper.multiscale(batch_data['rgb_near'])
+                # compute photometric loss at multiple scales
+                for scale in range(len(pred_array)):
+                    pred_ = pred_array[scale]
+                    rgb_curr_ = rgb_curr_array[scale]
+                    rgb_near_ = rgb_near_array[scale]
+                    mask_ = None
                     if mask is not None:
-                        mask_array = helper.multiscale(mask)
-                    num_scales = len(pred_array)
+                        mask_ = mask_array[scale]
 
-                    # compute photometric loss at multiple scales
-                    for scale in range(len(pred_array)):
-                        pred_ = pred_array[scale]
-                        rgb_curr_ = rgb_curr_array[scale]
-                        rgb_near_ = rgb_near_array[scale]
-                        mask_ = None
-                        if mask is not None:
-                            mask_ = mask_array[scale]
+                    # compute the corresponding intrinsic parameters
+                    height_, width_ = pred_.size(2), pred_.size(3)
+                    intrinsics_ = kitti_intrinsics.scale(height_, width_)
 
-                        # compute the corresponding intrinsic parameters
-                        height_, width_ = pred_.size(2), pred_.size(3)
-                        intrinsics_ = kitti_intrinsics.scale(height_, width_)
+                    # inverse warp from a nearby frame to the current frame
+                    warped_ = homography_from(rgb_near_, pred_,
+                                              batch_data['r_mat'],
+                                              batch_data['t_vec'], intrinsics_)
+                    photometric_loss += photometric_criterion(
+                        rgb_curr_, warped_, mask_) * (2**(scale - num_scales))
 
-                        # inverse warp from a nearby frame to the current frame
-                        warped_ = homography_from(rgb_near_, pred_,
-                                                  batch_data['r_mat'],
-                                                  batch_data['t_vec'], intrinsics_)
-                        photometric_loss += photometric_criterion(
-                            rgb_curr_, warped_, mask_) * (2**(scale - num_scales))
+            # Loss 3: the depth smoothness loss
+            smooth_loss = smoothness_criterion(pred) if args.w2 > 0 else 0
 
-                # Loss 3: the depth smoothness loss
-                smooth_loss = smoothness_criterion(pred) if args.w2 > 0 else 0
+            # backprop
+            loss = depth_loss + args.w1 * photometric_loss + args.w2 * smooth_loss
+            optimizer.zero_grad()
+            loss.backward()
 
-                # backprop
-                loss = depth_loss + args.w1 * photometric_loss + args.w2 * smooth_loss
-                optimizer.zero_grad()
-                loss.backward()
-
-                optimizer.step()
+            optimizer.step()
 
 
-            gpu_time = time.time() - start
+        gpu_time = time.time() - start
 
 
 
-            if i % 50 ==0:
-            #    print(model.module.conv4[5].conv1.weight[0])
-                #print(model.conv4.5.bn2.weight)
-                #print(model.module.parameter.grad)
-                print(model.module.parameter)
-                print(torch.argsort(model.module.parameter))
+        if i % 50 ==0:
+        #    print(model.module.conv4[5].conv1.weight[0])
+            #print(model.conv4.5.bn2.weight)
+            #print(model.module.parameter.grad)
+            print(model.module.parameter)
+            print(torch.argsort(model.module.parameter))
 
-            # measure accuracy and record loss
-            with torch.no_grad():
-                mini_batch_size = next(iter(batch_data.values())).size(0)
-                result = Result()
-                if mode != 'test_prediction' and mode != 'test_completion':
-                    result.evaluate(pred.data, gt.data, photometric_loss)
-                [
-                    m.update(result, gpu_time, data_time, mini_batch_size)
-                    for m in meters
-                ]
-                logger.conditional_print(mode, i, epoch, lr, len(loader),
-                                         block_average_meter, average_meter)
-                logger.conditional_save_img_comparison(mode, i, batch_data, pred,
-                                                       epoch)
-                logger.conditional_save_pred(mode, i, pred, epoch)
+        # measure accuracy and record loss
+        with torch.no_grad():
+            mini_batch_size = next(iter(batch_data.values())).size(0)
+            result = Result()
+            if mode != 'test_prediction' and mode != 'test_completion':
+                result.evaluate(pred.data, gt.data, photometric_loss)
+            [
+                m.update(result, gpu_time, data_time, mini_batch_size)
+                for m in meters
+            ]
+            logger.conditional_print(mode, i, epoch, lr, len(loader),
+                                     block_average_meter, average_meter)
+            logger.conditional_save_img_comparison(mode, i, batch_data, pred,
+                                                   epoch)
+            logger.conditional_save_pred(mode, i, pred, epoch)
 
-            if i % 20 == 0:
-                avg = logger.conditional_save_info(mode, average_meter, epoch)
-                is_best = logger.rank_conditional_save_best(mode, avg, epoch)
-                if is_best and not (mode == "train"):
-                    logger.save_img_comparison_as_best(mode, epoch)
-                logger.conditional_summarize(mode, avg, is_best)
+        if i % 20 == 0:
+            avg = logger.conditional_save_info(mode, average_meter, epoch)
+            is_best = logger.rank_conditional_save_best(mode, avg, epoch)
+            if is_best and not (mode == "train"):
+                logger.save_img_comparison_as_best(mode, epoch)
+            logger.conditional_summarize(mode, avg, is_best)
 
-                helper.save_checkpoint({  # save checkpoint
-                    'epoch': epoch,
-                    'model': model.module.state_dict(),
-                    'best_result': logger.best_result,
-                    'optimizer': optimizer.state_dict(),
-                    'args': args,
-                }, is_best, epoch, logger.output_directory)
+            helper.save_checkpoint({  # save checkpoint
+                'epoch': epoch,
+                'model': model.module.state_dict(),
+                'best_result': logger.best_result,
+                'optimizer': optimizer.state_dict(),
+                'args': args,
+            }, is_best, epoch, logger.output_directory)
 
     return avg, is_best
 
