@@ -265,15 +265,15 @@ def depth_read(filename, depth_mode):
         #print("bins shape", bins_2d_depth.statistic.shape)
 
         #saving the bins
-        if os.path.isfile("value.npy"):
-            values1 = np.load("value.npy", allow_pickle=True)
-        else:
-            values1  = []
-        if len(values1)==0:
-            values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
-        else:
-            values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
-        np.save("value.npy", values1)
+        # if os.path.isfile("value.npy"):
+        #     values1 = np.load("value.npy", allow_pickle=True)
+        # else:
+        #     values1  = []
+        # if len(values1)==0:
+        #     values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
+        # else:
+        #     values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
+        # np.save("value.npy", values1)
         #print(values1.shape)
         # with np.printoptions(suppress=True, precision=3):
         #     print(np.mean(values1, axis=0))
