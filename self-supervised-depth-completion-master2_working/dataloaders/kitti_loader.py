@@ -14,6 +14,7 @@ import socket
 from dataloaders import transforms
 from dataloaders.pose_estimator import get_pose_pnp
 from scipy.stats import binned_statistic_2d
+import matplotlib.pyplot as plt
 
 # binary file read
 from run_batch_kitti_pt_line_repro import load_from_bin, velo_points_filter, velo3d_2_camera2d_points, calib_oxts2velo, velo_point_rectify_egomotion, ego_motion_compute_each_lidar_scan
@@ -185,7 +186,7 @@ def depth_read(filename, depth_mode):
     #print(depth[140][-100:].squeeze())
 
 
-
+    bins = None
     if depth_mode=="sparse":
         #alternative velodyne
         #print(filename)
@@ -228,11 +229,8 @@ def depth_read(filename, depth_mode):
 
         mode='02'
         image_rgb = cv2.imread(path_binary)
-
         xyz_changed = ego_motion_compute_each_lidar_scan(dirname(path_binary), file)
-
         velo_points_rectified = velo_point_rectify_egomotion(velo_points, xyz_changed)
-
         # compute depth, line ids and then project them to camera coords from velo coords
         coords_, pt_c, pt_dep, line_id, line_c = velo3d_2_camera2d_points(velo_points_rectified,
                                                                           v_fov=(-24.9, 2.0),
@@ -240,27 +238,19 @@ def depth_read(filename, depth_mode):
                                                                           vc_path=v2c_filepath,
                                                                           cc_path=c2c_filepath, mode=mode)
         inds = np.where((coords_[1] >= 139) & (coords_[1] <= 141) & (coords_[0] > 1300))
-        #print(coords_[:, inds])
-        #print(pt_dep[inds])
-        dummy = 1
 
         # copying and pruning (last condition)
         #important_lines = [30,  7, 17, 20,  2,  1,  3,  4]
         important_lines = np.arange(65)
-        depth_bin = np.zeros_like(depth)
+        depth_binary = np.zeros_like(depth)
         for i in range(len(coords_[0])):
             hor = int(np.floor(coords_[0][i]))
             ver = int(np.floor(coords_[1][i]))
             if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0] and line_c[i] in important_lines:
-                depth_bin[ver, hor] = pt_dep[i]
-
-        #print("getting bin data")
-        depth = depth_bin
-
+                depth_binary[ver, hor] = pt_dep[i]
+        depth = depth_binary
         depth_points = np.where(depth>0)
-
         #depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
-
 
         #binning
         size_of_bin = 40
@@ -272,10 +262,9 @@ def depth_read(filename, depth_mode):
         values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]] # look at pixels with non-0 depth
         #bin function
         bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range= [[0, owidth], [0, oheight]])
-        print("bins shape", bins_2d_depth.statistic.shape)
+        #print("bins shape", bins_2d_depth.statistic.shape)
 
-        #print(params)
-
+        #saving the bins
         if os.path.isfile("value.npy"):
             values1 = np.load("value.npy")
         else:
@@ -285,14 +274,14 @@ def depth_read(filename, depth_mode):
         else:
             values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
         np.save("value.npy", values1)
-        print(values1.shape)
-        print(np.mean(values1, axis=0))
+        #print(values1.shape)
+        # with np.printoptions(suppress=True, precision=3):
+        #     print(np.mean(values1, axis=0))
         del values1
 
+        bins = bins_2d_depth.statistic
 
-    return depth #375, 1242 #376, 1241
-
-
+    return depth, bins #375, 1242 #376, 1241
 
 
 
@@ -404,6 +393,16 @@ def get_rgb_near(path, args):
 
     return rgb_read(path_near)
 
+def draw_features(rgb, bins):
+    img_height = 352
+    img_width = 1216
+    bin_ver = np.arange(0, img_height, 40)
+    bin_ver = np.append(bin_ver, img_height)
+    bin_hor = np.arange(0, img_width, 40)
+    bin_hor = np.append(bin_hor, img_width)
+
+
+
 
 class KittiDepth(data.Dataset):
     """A data loader for the Kitti dataset
@@ -417,15 +416,19 @@ class KittiDepth(data.Dataset):
         self.K = load_calib()
         self.threshold_translation = 0.1
 
+
+
+
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
-        sparse = depth_read(self.paths['d'][index], "sparse") if \
+        sparse, bins = depth_read(self.paths['d'][index], "sparse") if \
             (self.paths['d'][index] is not None and self.args.use_d) else None
-        target = depth_read(self.paths['gt'][index], "gt") if \
+        target, bins_gt = depth_read(self.paths['gt'][index], "gt") if \
             self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
+        draw_features(rgb, bins)
         return rgb, sparse, target, rgb_near
 
     def __getitem__(self, index):
@@ -445,6 +448,7 @@ class KittiDepth(data.Dataset):
                 t_vec = np.zeros((3, 1))
                 r_mat = np.eye(3)
 
+        rgb_col = rgb
         rgb, gray = handle_gray(rgb, self.args)
         candidates = {"rgb":rgb, "d":sparse, "gt":target, \
             "g":gray, "r_mat":r_mat, "t_vec":t_vec, "rgb_near":rgb_near}
