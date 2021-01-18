@@ -78,7 +78,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='gd',
+                    default='gd', #if rgb then use rgb, if gd not rgb then
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -170,6 +170,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     torch.set_printoptions(profile="full")
     for i, batch_data in enumerate(loader):
 
+        # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()
         batch_data = {
             key: val.to(device)
@@ -181,13 +182,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         start = time.time()
         pred = model(batch_data)
-        # im = batch_data['d'].detach().cpu().numpy()
-        # im_sq = im.squeeze()
-        # plt.figure()
-        # plt.imshow(im_sq)
-        # plt.show()
-        # for i in range(im_sq.shape[0]):
-        #     print(f"{i} - {np.sum(im_sq[i])}")
+
+        vis=False
+        if vis:
+            im = batch_data['gt'].detach().cpu().numpy()
+            im_sq = im.squeeze()
+            plt.figure()
+            plt.imshow(im_sq)
+            plt.show()
+            # for i in range(im_sq.shape[0]):
+            #     print(f"{i} - {np.sum(im_sq[i])}")
 
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
         if mode == 'train':
@@ -241,12 +245,18 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         gpu_time = time.time() - start
 
-        if i % 50 == 0:
+
+        # counting pixels in each bin
+        binned_pixels = np.load("value.npy", allow_pickle=True)
+        print(len(binned_pixels))
+
+        if i % 5 == 0:
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             print("*************swiches:")
-            print(model.module.parameter)
+            torch.set_printoptions(precision=3, sci_mode=False)
+            print(1000*model.module.parameter)
             #print(torch.argsort(model.module.parameter))
             dummy=1
 
