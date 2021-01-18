@@ -266,7 +266,7 @@ def depth_read(filename, depth_mode):
 
         #saving the bins
         if os.path.isfile("value.npy"):
-            values1 = np.load("value.npy")
+            values1 = np.load("value.npy", allow_pickle=True)
         else:
             values1  = []
         if len(values1)==0:
