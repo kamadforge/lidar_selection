@@ -182,7 +182,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         prune_lines=False
         if prune_lines:
-            lines_unmasked=[300,301,302]
+            lines_unmasked=np.random.choice(352,20, replace=False)
             lines_all=np.arange(352)
             lines_masked = [x for x in lines_all if x not in lines_unmasked]
             batch_data['d'][:, :, lines_masked]=0
