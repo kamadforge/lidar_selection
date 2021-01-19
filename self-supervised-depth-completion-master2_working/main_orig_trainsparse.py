@@ -180,12 +180,52 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         start = time.time()
 
-        prune_lines=False
-        if prune_lines:
+        prune_type="sq"
+        if prune_type == "vlines":
+            np.random.seed(10)
             lines_unmasked=np.random.choice(352,20, replace=False)
             lines_all=np.arange(352)
             lines_masked = [x for x in lines_all if x not in lines_unmasked]
             batch_data['d'][:, :, lines_masked]=0
+            print(batch_data['d'].shape)
+
+        elif prune_type == "sq":
+
+            squares_arg = np.load("ranks/switches_argsort_2D_iter_70.npy", allow_pickle=True)
+            print("swicthes", squares_arg)
+            square_size = 40
+            squares_top_num = 20
+            squares_top = np.where(squares_arg<squares_top_num)
+            squares_top_scaled = np.array(squares_top)* square_size
+            mask = np.zeros((352, 1216))
+
+            bin_ver = np.arange(0, 352, square_size)
+            bin_ver = np.append(bin_ver, oheight)
+            bin_hor = np.arange(0, 1216, square_size)
+            bin_hor = np.append(bin_hor, owidth)
+
+            for i in range(squares_top_num):
+                ver = squares_top[0][i]
+                hor = squares_top[1][i]
+                mask[bin_ver[ver]:bin_ver[ver+1], bin_hor[hor]:bin_hor[hor+1]]=1
+
+            aaa1 = batch_data['d'].detach().cpu().numpy()
+#            print(np.where(aaa1 > 0))
+            batch_data['d']=torch.einsum("abcd, cd->abcd", [batch_data['d'], torch.Tensor(mask).to(device)])
+            aaa2 = batch_data['d'].detach().cpu().numpy()
+#            print(np.where(aaa2>0))
+
+            # from PIL import Image
+            # img = Image.fromarray(aaa[0, :, :, :], 'RGB')
+            # #img.save('my.png')
+            # img.show()
+
+
+
+
+
+
+
 
         pred = model(batch_data)
         #im = batch_data['d'].detach().cpu().numpy()
