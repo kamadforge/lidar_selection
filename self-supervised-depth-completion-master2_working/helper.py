@@ -34,7 +34,7 @@ class logger:
             print("=> creating source code backup ...")
             backup_directory = os.path.join(output_directory, "code_backup")
             self.backup_directory = backup_directory
-            backup_source_code(backup_directory)
+            # backup_source_code(backup_directory)
             # create new csv files with only header
             with open(self.train_csv, 'w') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
