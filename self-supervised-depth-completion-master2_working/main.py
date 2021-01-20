@@ -169,7 +169,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     for i, batch_data in enumerate(loader):
         #print(i)
 
-
         start = time.time()
         batch_data = {
             key: val.to(device)
