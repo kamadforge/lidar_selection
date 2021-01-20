@@ -720,6 +720,8 @@ class DepthCompletionNetQSquare(nn.Module):
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
         S = phi / torch.sum(phi)
+        #print("S from model", S)
+        #print("parameter from model", self.parameter)
 
         # Slen=len(S)
         # S_expand = S.repeat(x['d'].shape[-1]).reshape(Slen, x['d'].shape[-1])
@@ -742,7 +744,7 @@ class DepthCompletionNetQSquare(nn.Module):
                 # print(self.bin_hor[i+1])
                 # print(self.bin_hor[j])
                 # print(self.bin_hor[j+1])
-                mask[self.bin_hor[i]:self.bin_hor[i+1], self.bin_hor[j]:self.bin_hor[j+1]]=self.parameter[i,j]
+                mask[self.bin_hor[i]:self.bin_hor[i+1], self.bin_hor[j]:self.bin_hor[j+1]]=S[i,j]#self.parameter[i,j]
         output = x['d'] * mask
 
 

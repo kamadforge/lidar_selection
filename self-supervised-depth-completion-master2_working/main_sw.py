@@ -6,6 +6,7 @@ import torch
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
+import torch.nn.functional as F
 
 
 from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
@@ -245,20 +246,33 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         gpu_time = time.time() - start
 
-
         # counting pixels in each bin
-        binned_pixels = np.load("value.npy", allow_pickle=True)
-        print(len(binned_pixels))
+        #binned_pixels = np.load("value.npy", allow_pickle=True)
+        #print(len(binned_pixels))
 
-        if i % 5 == 0:
+        if i % 3 == 0:
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             print("*************swiches:")
-            torch.set_printoptions(precision=3, sci_mode=False)
-            print(1000*model.module.parameter)
-            #print(torch.argsort(model.module.parameter))
-            dummy=1
+            torch.set_printoptions(precision=6, sci_mode=False)
+            mmp = 1000 * model.module.parameter
+            phi = F.softplus(mmp)
+            S = phi / torch.sum(phi)
+            print(S, '*********')
+
+            S_numpy= S.detach().cpu()
+            switches_2d_argsort = np.argsort(S_numpy, None)
+            print(switches_2d_argsort)
+            hor = switches_2d_argsort % S_numpy.shape[1]
+            ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
+            print(ver,hor)
+            if switch_mode == "sq":
+                print(switches_2d_argsort)
+            elif switch_mode == "lidar_lines":
+                print(torch.argsort(S))
+            np.save(f"ranks/switches_argsort_2D_iter_{i}.npy", switches_2d_argsort)
+            np.save(f"ranks/switches_2D_iter_{i}.npy", S_numpy)
 
         # measure accuracy and record loss
         with torch.no_grad():
@@ -330,7 +344,12 @@ def main():
             return
 
     print("=> creating model and optimizer ... ", end='')
-    model = DepthCompletionNetQSquare(args).to(device)
+
+    global switch_mode; switch_mode = "sq"
+    if switch_mode == "sq":
+        model = DepthCompletionNetQSquare(args).to(device)
+    elif switch_mode == "lidar_lines":
+        model = DepthCompletionNetQ(args).to(device)
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]

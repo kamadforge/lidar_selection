@@ -180,12 +180,67 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         start = time.time()
 
-        prune_lines=False
-        if prune_lines:
+        prune_type="sq"
+        if prune_type == "vlines":
+            np.random.seed(10)
             lines_unmasked=np.random.choice(352,20, replace=False)
             lines_all=np.arange(352)
             lines_masked = [x for x in lines_all if x not in lines_unmasked]
             batch_data['d'][:, :, lines_masked]=0
+            print(batch_data['d'].shape)
+
+        elif prune_type == "sq":
+
+            A = np.load("ranks/switches_2D_iter_507.npy", allow_pickle=True)
+            # with np.printoptions(precision=5):
+            #     print("switches", A)
+
+            A_2d_argsort = np.argsort(A, None)
+            ver = np.floor(A_2d_argsort // A.shape[1])
+            hor = A_2d_argsort % A.shape[1]
+
+            A_list = np.stack([ver, hor]).transpose()
+
+            square_size = 40
+            squares_top_num = 20
+            square_choice="random_positive"
+
+            if square_choice=="best":
+                squares_top = A_list[:20]
+            elif square_choice=="random_all":
+                np.random.seed(10)
+                rand_idx = np.random.choice(len(A_list), 20)
+                print(rand_idx)
+                squares_top = A_list[rand_idx]
+            elif square_choice=="random_positive": # from squres which include depth points
+                np.random.seed(10)
+                rand_idx = np.random.choice(len(A_list[:93]), 20)
+                print(rand_idx)
+                squares_top = A_list[rand_idx]
+
+            squares_top_scaled = np.array(squares_top)* square_size
+            mask = np.zeros((352, 1216))
+
+            bin_ver = np.arange(0, 352, square_size)
+            bin_ver = np.append(bin_ver, oheight)
+            bin_hor = np.arange(0, 1216, square_size)
+            bin_hor = np.append(bin_hor, owidth)
+            #
+            for it in range(squares_top_num):
+                ver = int(squares_top[it][0])
+                hor = int(squares_top[it][1])
+                #print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
+                mask[bin_ver[ver]:bin_ver[ver+1], bin_hor[hor]:bin_hor[hor+1]]=1
+
+            aaa1 = batch_data['d'].detach().cpu().numpy()
+            batch_data['d']=torch.einsum("abcd, cd->abcd", [batch_data['d'], torch.Tensor(mask).to(device)])
+            aaa2 = batch_data['d'].detach().cpu().numpy()
+            #
+            # # from PIL import Image
+            # # img = Image.fromarray(aaa[0, :, :, :], 'RGB')
+            # # #img.save('my.png')
+            # # img.show()
+
 
         pred = model(batch_data)
         #im = batch_data['d'].detach().cpu().numpy()

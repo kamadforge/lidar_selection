@@ -77,7 +77,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='gd',
+                    default='d', #'gd'
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -107,7 +107,7 @@ parser.add_argument(
     '-m',
     '--train-mode',
     type=str,
-    default="dense",
+    default="sparse",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
@@ -168,6 +168,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     torch.set_printoptions(profile="full")
     for i, batch_data in enumerate(loader):
+
+
+
 
         start = time.time()
         batch_data = {

@@ -274,10 +274,10 @@ def depth_read(filename, depth_mode):
         # else:
         #     values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
         # np.save("value.npy", values1)
-        #print(values1.shape)
-        # with np.printoptions(suppress=True, precision=3):
-        #     print(np.mean(values1, axis=0))
-        del values1
+        # #print(values1.shape)
+        # #with np.printoptions(suppress=True, precision=3):
+        # #    print(np.mean(values1, axis=0))
+        # del values1
 
         bins = bins_2d_depth.statistic
 
