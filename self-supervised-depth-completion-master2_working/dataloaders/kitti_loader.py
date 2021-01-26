@@ -281,7 +281,74 @@ def depth_read(filename, depth_mode):
 
         bins = bins_2d_depth.statistic
 
+        depth_adjustment(depth, depth_points, bins_2d_depth)
+
     return depth, bins #375, 1242 #376, 1241
+
+
+#for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
+def depth_adjustment(depth, depth_points, bins_2d_depth):
+    #depth_points[0] - ver coordinates of posiitve dept points
+    # depth_points[1] - hor coordinates of posiitve dept points
+
+    depth_new = np.zeros_like(depth)
+    # find the set of points for each bin
+    for i in range(max(bins_2d_depth.binnumber)):
+        #print("bin", i)
+        bin_i_points = np.where(bins_2d_depth[3] == i)[0]
+        #print(bin_i_points)
+
+        #if the big bin has at least one points
+        if len(bin_i_points)>10:
+            #print("points", len(bin_i_points))
+            if len(bin_i_points)==1:
+                a=5
+
+            # get the corner of the bin square from which the point comes
+            corner = [depth_points[0][bin_i_points[0]] - [depth_points[0][bin_i_points[0]] % 40], depth_points[1][bin_i_points[0]] - [depth_points[1][bin_i_points[0]] % 40]]
+            bin_sub_ver = np.linspace(corner[0], corner[0]+40, 5 ) #four bins 10 pixels each
+            bin_sub_hor = np.linspace(corner[1], corner[1]+40, 5) #four bins 10 pixels each
+
+            # get the coordiantes of the points for each big bin
+            depth_sub_points_ver, depth_sub_points_hor, depth_sub =[], [], []
+            for i2 in bin_i_points:
+                depth_sub_points_ver.append(depth_points[0][i2])
+                depth_sub_points_hor.append(depth_points[1][i2])
+                #add the depth of the points in that given big bin
+                depth_sub.append(depth[depth_points[0][i2], depth_points[1][i2]])
+
+            depth_sub_points_ver = np.array(depth_sub_points_ver).squeeze()
+            depth_sub_points_hor = np.array(depth_sub_points_hor).squeeze()
+            depth_sub = np.array(depth_sub).squeeze()
+            bin_sub_ver = np.array(bin_sub_ver).squeeze()
+            bin_sub_hor = np.array(bin_sub_hor).squeeze()
+
+
+
+            bins_2d_depth_sub = binned_statistic_2d(depth_sub_points_ver, depth_sub_points_hor, depth_sub, 'mean', bins=[bin_sub_ver, bin_sub_hor])
+
+            depth_sub_new = bins_2d_depth_sub.statistic
+
+            # Find indices that you need to replace
+            inds = np.where(np.isnan(depth_sub_new))
+
+            # Place column means in the indices. Align the arrays using take
+            depth_sub_new[inds[0], inds[1]]  = np.mean(depth_sub)
+
+            sub_meshgrid = np.meshgrid((bin_sub_ver[:-1] - 5).astype(int), (bin_sub_hor[:-1] - 5).astype(int))
+
+            depth_sub_new = np.expand_dims(depth_sub_new, axis=2)
+
+            try:
+                #print(sub_meshgrid)
+                depth_new[sub_meshgrid] = depth_sub_new
+            except:
+                print("err")
+
+    print(len(np.where(depth_new>0)[0]))
+
+    return depth_new
+
 
 
 
@@ -290,7 +357,6 @@ def drop_depth_measurements(depth, prob_keep):
     mask = np.random.binomial(1, prob_keep, depth.shape)
     depth *= mask
     return depth
-
 
 def train_transform(rgb, sparse, target, rgb_near, args):
     # s = np.random.uniform(1.0, 1.5) # random scaling

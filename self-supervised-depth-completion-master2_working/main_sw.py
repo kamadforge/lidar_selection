@@ -254,23 +254,23 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
-            print("*************swiches:")
+            #print("*************swiches:")
             torch.set_printoptions(precision=6, sci_mode=False)
             mmp = 1000 * model.module.parameter
             phi = F.softplus(mmp)
             S = phi / torch.sum(phi)
-            print(S, '*********')
+            #print(S, '*********')
 
             S_numpy= S.detach().cpu()
             switches_2d_argsort = np.argsort(S_numpy, None)
-            print(switches_2d_argsort)
+            #print(switches_2d_argsort)
             hor = switches_2d_argsort % S_numpy.shape[1]
             ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
-            print(ver,hor)
-            if switch_mode == "sq":
-                print(switches_2d_argsort)
-            elif switch_mode == "lidar_lines":
-                print(torch.argsort(S))
+            #print(ver,hor)
+            # if switch_mode == "sq":
+            #     print(switches_2d_argsort)
+            # elif switch_mode == "lidar_lines":
+            #     print(torch.argsort(S))
             np.save(f"ranks/switches_argsort_2D_iter_{i}.npy", switches_2d_argsort)
             np.save(f"ranks/switches_2D_iter_{i}.npy", S_numpy)
 

@@ -72,7 +72,6 @@ def convt_bn_relu(in_channels, out_channels, kernel_size, \
 
     return layers
 
-
 class DepthCompletionNet(nn.Module):
     def __init__(self, args):
         assert (

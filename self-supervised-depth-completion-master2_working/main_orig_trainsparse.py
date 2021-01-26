@@ -184,10 +184,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         if prune_type == "vlines":
             np.random.seed(10)
             lines_unmasked=np.random.choice(352,20, replace=False)
+            lines_unmasked = np.arange(352)
             lines_all=np.arange(352)
             lines_masked = [x for x in lines_all if x not in lines_unmasked]
             batch_data['d'][:, :, lines_masked]=0
             print(batch_data['d'].shape)
+            print("lines unmasked", lines_unmasked)
+
 
         elif prune_type == "sq":
 
@@ -229,7 +232,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             for it in range(squares_top_num):
                 ver = int(squares_top[it][0])
                 hor = int(squares_top[it][1])
-                #print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
+                print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
                 mask[bin_ver[ver]:bin_ver[ver+1], bin_hor[hor]:bin_hor[hor+1]]=1
 
             aaa1 = batch_data['d'].detach().cpu().numpy()
