@@ -180,7 +180,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         start = time.time()
 
-        prune_type="sq"
+        prune_type="sq" #sq, vlines, nothing
         if prune_type == "vlines":
             np.random.seed(10)
             lines_unmasked=np.random.choice(352,20, replace=False)
@@ -194,11 +194,12 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         elif prune_type == "sq":
 
-            A = np.load("ranks/switches_2D_iter_507.npy", allow_pickle=True)
-            # with np.printoptions(precision=5):
-            #     print("switches", A)
+            A = np.load("ranks/switches_2D_equal_iter_390.npy", allow_pickle=True)
+            with np.printoptions(precision=5):
+                print("switches", A)
 
-            A_2d_argsort = np.argsort(A, None)
+            #reverse the order
+            A_2d_argsort = np.argsort(A, None)[::-1]
             ver = np.floor(A_2d_argsort // A.shape[1])
             hor = A_2d_argsort % A.shape[1]
 
@@ -211,12 +212,12 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             if square_choice=="best":
                 squares_top = A_list[:20]
             elif square_choice=="random_all":
-                np.random.seed(10)
+                np.random.seed(11)
                 rand_idx = np.random.choice(len(A_list), 20)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
             elif square_choice=="random_positive": # from squres which include depth points
-                np.random.seed(10)
+                np.random.seed(11)
                 rand_idx = np.random.choice(len(A_list[:93]), 20)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]

@@ -250,7 +250,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
 
-        if i % 3 == 0:
+        if i % 10 == 0:
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
@@ -259,11 +259,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             mmp = 1000 * model.module.parameter
             phi = F.softplus(mmp)
             S = phi / torch.sum(phi)
-            #print(S, '*********')
+            print(S, '*********')
 
             S_numpy= S.detach().cpu()
             switches_2d_argsort = np.argsort(S_numpy, None)
-            #print(switches_2d_argsort)
+            print(switches_2d_argsort)
             hor = switches_2d_argsort % S_numpy.shape[1]
             ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
             #print(ver,hor)
@@ -271,8 +271,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             #     print(switches_2d_argsort)
             # elif switch_mode == "lidar_lines":
             #     print(torch.argsort(S))
-            np.save(f"ranks/switches_argsort_2D_iter_{i}.npy", switches_2d_argsort)
-            np.save(f"ranks/switches_2D_iter_{i}.npy", S_numpy)
+            np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
+            np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
 
         # measure accuracy and record loss
         with torch.no_grad():
