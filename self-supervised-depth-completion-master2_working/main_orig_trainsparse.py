@@ -195,8 +195,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         elif prune_type == "sq":
 
             A = np.load("ranks/switches_2D_equal_iter_390.npy", allow_pickle=True)
-            with np.printoptions(precision=5):
-                print("switches", A)
+            # with np.printoptions(precision=5):
+            #     print("switches", A)
 
             #reverse the order
             A_2d_argsort = np.argsort(A, None)[::-1]
@@ -233,7 +233,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             for it in range(squares_top_num):
                 ver = int(squares_top[it][0])
                 hor = int(squares_top[it][1])
-                print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
+                #print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
                 mask[bin_ver[ver]:bin_ver[ver+1], bin_hor[hor]:bin_hor[hor+1]]=1
 
             aaa1 = batch_data['d'].detach().cpu().numpy()
