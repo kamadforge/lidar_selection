@@ -1,19 +1,17 @@
 import argparse
 import os
 import time
-
 import torch
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-
 from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNet
 from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
-
+from scipy.stats import binned_statistic_2d
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -167,8 +165,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         lr = 0
 
     for i, batch_data in enumerate(loader):
-
-
         start = time.time()
         batch_data = {
             key: val.to(device)
@@ -198,19 +194,53 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # with np.printoptions(precision=5):
             #     print("switches", A)
 
-            #reverse the order
+            #get the ver and hor coordinates of the most important squares
             A_2d_argsort = np.argsort(A, None)[::-1]
             ver = np.floor(A_2d_argsort // A.shape[1])
             hor = A_2d_argsort % A.shape[1]
-
             A_list = np.stack([ver, hor]).transpose()
+
+
 
             square_size = 40
             squares_top_num = 20
-            square_choice="random_positive"
+            square_choice="latin"
 
             if square_choice=="best":
                 squares_top = A_list[:20]
+            if square_choice=="latin":
+
+                hor_large = np.linspace(0,30,7)
+                ver_larger = np.arange(10)
+                all_squares = np.arange(len(A_list))
+                bins_2d_latin= binned_statistic_2d(ver, hor, all_squares, 'min', bins=[ver_larger, hor_large])
+
+                bins_2d_latin.statistic
+
+                best_latin  = bins_2d_latin.statistic[-3:].flatten().astype(int)
+
+                best_latin_coors = list(A_list[best_latin])
+
+
+                for i1 in A_list:
+                    elem_in = False
+                    for i2 in best_latin_coors:
+                        if i1[0]==i2[0] and i1[1]==i2[1] :
+                            elem_in = True
+                    if not elem_in:
+                        best_latin_coors.append(i1)
+                    if len(best_latin_coors)==20:
+                        break;
+
+                squares_top = np.array(best_latin_coors)
+
+
+
+
+
+
+
+
             elif square_choice=="random_all":
                 np.random.seed(11)
                 rand_idx = np.random.choice(len(A_list), 20)
