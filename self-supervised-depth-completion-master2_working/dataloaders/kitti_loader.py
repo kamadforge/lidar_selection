@@ -293,7 +293,7 @@ def depth_adjustment(depth, depth_points, bins_2d_depth):
 
     depth_new = np.zeros_like(depth)
     # find the set of points for each bin
-    max_bin = 400 if len(bins_2d_depth.binnumber) else max(bins_2d_depth.binnumber)
+    max_bin = 400 #max(bins_2d_depth.binnumber)
     for i in range(max_bin):
         #print("bin", i)
         bin_i_points = np.where(bins_2d_depth[3] == i)[0]
