@@ -254,7 +254,7 @@ def depth_read(filename, depth_mode):
 
         #binning
         size_of_bin = 40
-        print(depth.shape)
+        #print(depth.shape)
         bin_ver=np.arange(0, oheight, size_of_bin)
         bin_ver=np.append(bin_ver, oheight)
         bin_hor=np.arange(0, owidth, size_of_bin)
@@ -340,13 +340,14 @@ def depth_adjustment(depth, depth_points, bins_2d_depth):
 
             depth_sub_new = np.expand_dims(depth_sub_new, axis=2)
 
+            # adding the means of the points to the center of the square, doing try because of the remainder part at the end of the image which may not fit
             try:
                 #print(sub_meshgrid)
                 depth_new[sub_meshgrid] = depth_sub_new
             except:
                 print("err")
 
-    print(len(np.where(depth_new>0)[0]))
+    #print(len(np.where(depth_new>0)[0]))
 
     return depth_new
 

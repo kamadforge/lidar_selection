@@ -164,6 +164,12 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         model.eval()
         lr = 0
 
+    print("\nTraining")
+    prune_type = "sq"  # sq, vlines, nothing
+    square_choice = "latin"
+    if prune_type=="sq":
+        print(f"Features: squares\n Square choice: {square_choice}")
+
     for i, batch_data in enumerate(loader):
         start = time.time()
         batch_data = {
@@ -173,10 +179,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
         data_time = time.time() - start
-
         start = time.time()
 
-        prune_type="sq" #sq, vlines, nothing
         if prune_type == "vlines":
             np.random.seed(10)
             lines_unmasked=np.random.choice(352,20, replace=False)
@@ -189,41 +193,34 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
         elif prune_type == "sq":
-
             A = np.load("ranks/switches_2D_equal_iter_390.npy", allow_pickle=True)
             # with np.printoptions(precision=5):
             #     print("switches", A)
-
             #get the ver and hor coordinates of the most important squares
             A_2d_argsort = np.argsort(A, None)[::-1]
             ver = np.floor(A_2d_argsort // A.shape[1])
             hor = A_2d_argsort % A.shape[1]
             A_list = np.stack([ver, hor]).transpose()
-
-
-
             square_size = 40
             squares_top_num = 20
-            square_choice="latin"
 
-            if square_choice=="best":
+            if square_choice=="full":
+                squares_top = A_list
+
+            if square_choice=="best_sw":
                 squares_top = A_list[:20]
-            if square_choice=="latin":
 
+            if square_choice=="latin_sw":
+                #creating latin grid (with big squares/blocks)
                 hor_large = np.linspace(0,30,7)
                 ver_larger = np.arange(10)
                 all_squares = np.arange(len(A_list))
                 bins_2d_latin= binned_statistic_2d(ver, hor, all_squares, 'min', bins=[ver_larger, hor_large])
-
                 bins_2d_latin.statistic
-
                 best_latin  = bins_2d_latin.statistic[-3:].flatten().astype(int)
-
                 best_latin_coors = list(A_list[best_latin])
-
-
                 for i1 in A_list:
-                    elem_in = False
+                    elem_in = False #check if the block already contains a small square
                     for i2 in best_latin_coors:
                         if i1[0]==i2[0] and i1[1]==i2[1] :
                             elem_in = True
@@ -231,36 +228,48 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                         best_latin_coors.append(i1)
                     if len(best_latin_coors)==20:
                         break;
-
                 squares_top = np.array(best_latin_coors)
 
-
-
-
-
-
+            elif square_choice=="latin":
+                np.random.seed(12)
+                squares_latin_evenlyspaced = []
+                # create blocks, choose k random blocks and have fixed first block
+                hor_large = np.linspace(0, 30, 7)
+                ver_large = np.arange(10)
+                # random sample from positive blocks
+                hor_large_rand = np.random.choice(len(hor_large), 20)
+                ver_large_rand  = np.random.choice([6,7,8], 20)
+                # selecting a small square from A_list with given corrdinates within a block
+                for j in range(len(hor_large_rand)):
+                    elem = np.where((A_list[:, 0]== ver_large_rand[j]) & (A_list[:, 1] == hor_large[hor_large_rand[j]]))[0][0]
+                    squares_latin_evenlyspaced.append(elem)
+                squares_top = A_list[squares_latin_evenlyspaced]
 
 
             elif square_choice=="random_all":
-                np.random.seed(11)
+                np.random.seed(12)
                 rand_idx = np.random.choice(len(A_list), 20)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
-            elif square_choice=="random_positive": # from squres which include depth points
-                np.random.seed(11)
+
+            elif square_choice=="random_pos": # from squares which include depth points
+                np.random.seed(12)
+                #choose from the squares which have roughly positive number of depth points
                 rand_idx = np.random.choice(len(A_list[:93]), 20)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
 
+            # after selecting indices of the squares save in squares_top
             squares_top_scaled = np.array(squares_top)* square_size
             mask = np.zeros((352, 1216))
-
             bin_ver = np.arange(0, 352, square_size)
             bin_ver = np.append(bin_ver, oheight)
             bin_hor = np.arange(0, 1216, square_size)
             bin_hor = np.append(bin_hor, owidth)
-            #
-            for it in range(squares_top_num):
+            # filling in the mask with selected squares up to squares_top_num (e.g. 20)
+            print("Number of squares selected: ", len(squares_top))
+            print(squares_top)
+            for it in range(len(squares_top)): #in all but full should be equal to squares_top_num
                 ver = int(squares_top[it][0])
                 hor = int(squares_top[it][1])
                 #print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
