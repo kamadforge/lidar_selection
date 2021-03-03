@@ -187,7 +187,7 @@ def depth_read(filename, depth_mode):
 
 
     bins = None
-    if depth_mode=="sparse":
+    if depth_mode=="sparse_False": #"sparse"
         #alternative velodyne
         #print(filename)
         
@@ -367,10 +367,17 @@ def train_transform(rgb, sparse, target, rgb_near, args):
 
     transform_geometric = transforms.Compose([
         # transforms.Rotate(angle),
-        # transforms.Resize(s),
+
         transforms.BottomCrop((oheight, owidth)),
+        transforms.Resize((192.0,640.0)),
         transforms.HorizontalFlip(do_flip)
     ])
+
+    # transform = transforms.Compose([transforms.Resize(224.0),
+    #                                 transforms.ToTensor(),
+    #                                 transforms.Normalize(mean=[0.5, 0.5, 0.5],
+    #                                                      std=[0.5, 0.5, 0.5])])
+
     if sparse is not None:
         sparse = transform_geometric(sparse)
     target = transform_geometric(target)
@@ -421,6 +428,7 @@ def handle_gray(rgb, args):
     if not args.use_g:
         return rgb, None
     else:
+        rgb = (rgb * 255).astype(np.uint8)
         img = np.array(Image.fromarray(rgb).convert('L'))
         img = np.expand_dims(img, -1)
         if not args.use_rgb:
