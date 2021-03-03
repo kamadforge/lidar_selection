@@ -24,10 +24,8 @@ def pil_loader(path):
         with Image.open(f) as img:
             return img.convert('RGB')
 
-
 class MonoDataset(data.Dataset):
     """Superclass for monocular dataloaders
-
     Args:
         data_path
         filenames

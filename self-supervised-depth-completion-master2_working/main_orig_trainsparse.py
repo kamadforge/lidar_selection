@@ -15,6 +15,7 @@ from scipy.stats import binned_statistic_2d
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
@@ -125,6 +126,7 @@ else:
 print(args)
 
 cuda = torch.cuda.is_available() and not args.cpu
+print(torch.cuda.get_device_name(torch.cuda.current_device()))
 if cuda:
     import torch.backends.cudnn as cudnn
     cudnn.benchmark = True
