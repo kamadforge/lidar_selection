@@ -321,7 +321,7 @@ class Resize(object):
             ``PIL.Image.BILINEAR``
     """
     def __init__(self, size, interpolation='nearest'):
-        assert isinstance(size, float)
+        # assert isinstance(size, float)
         self.size = size
         self.interpolation = interpolation
 
@@ -333,9 +333,9 @@ class Resize(object):
             img (numpy.ndarray (C x H x W)): Rescaled image.
         """
         if img.ndim == 3:
-            return skimage.transform.rescale(img, self.size, order=0)
+            return skimage.transform.resize(img, self.size, order=0) #rescale
         elif img.ndim == 2:
-            return skimage.transform.rescale(img, self.size, order=0)
+            return skimage.transform.resize(img, self.size, order=0) #rescale
         else:
             RuntimeError(
                 'img should be ndarray with 2 or 3 dimensions. Got {}'.format(
