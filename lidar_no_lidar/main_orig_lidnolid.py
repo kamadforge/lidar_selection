@@ -22,7 +22,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
-                    default=0, #4
+                    default=4, #4
                     type=int,
                     metavar='N',
                     help='number of data loading workers (default: 4)')
@@ -45,7 +45,7 @@ parser.add_argument('-c',
                     ' (default: l2)')
 parser.add_argument('-b',
                     '--batch-size',
-                    default=1,
+                    default=20,
                     type=int,
                     help='mini-batch size (default: 1)')
 parser.add_argument('--lr',
@@ -215,18 +215,6 @@ smoothness_criterion = criteria.SmoothnessLoss()
 #     return outputs, losses
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def iterate(mode, args, loader, model, optimizer, logger, epoch):
     block_average_meter = AverageMeter()
     average_meter = AverageMeter()
@@ -276,6 +264,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         features = encoder(batch_data['rgb'])
         outputs = decoder(features)
 
+        if i % 20 == 0:
+            print(outputs[('disp', 0)][1,0,:,40])
+
         # pred = model(batch_data)
         # im = batch_data['d'].detach().cpu().numpy()
         # im_sq = im.squeeze()
@@ -295,6 +286,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             elif 'dense' in args.train_mode:
                 depth_loss = depth_criterion(pred, gt)
                 mask = (gt < 1e-3).float()
+                if i % 20 == 0:
+                    print("\n\n\n gt \n")
+                    print(gt[1,0,:,40])
 
             # # Loss 2: the self-supervised photometric loss
             # if args.use_pose:
@@ -338,8 +332,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         gpu_time = time.time() - start
 
-        # if i % 9 == 0:
-        #     print(i)
+
+        if i % 50 == 0:
+            print(i)
 
         # measure accuracy and record loss
         with torch.no_grad():
@@ -357,7 +352,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        if i % 100 ==0:
+        if i % 200 ==0:
+
+            print(gpu_time)
+
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
@@ -442,6 +440,8 @@ def main():
     encoder = torch.nn.DataParallel(encoder)
     decoder = torch.nn.DataParallel(decoder)
 
+
+
     # Data loading code
     print("=> creating data loaders ... ")
     if not is_eval:
@@ -456,7 +456,7 @@ def main():
     val_dataset = KittiDepth('val', args)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
-        batch_size=1,
+        batch_size=12, #1
         shuffle=False,
         num_workers=2,
         pin_memory=True)  # set batch size to be 1 for validation
@@ -485,13 +485,13 @@ def main():
                 epoch)  # train for one epoch
         result, is_best = iterate("val", args, val_loader, model, None, logger,
                                   epoch)  # evaluate on validation set
-        helper.save_checkpoint({ # save checkpoint
-            'epoch': epoch,
-            'model': model.module.state_dict(),
-            'best_result': logger.best_result,
-            'optimizer' : optimizer.state_dict(),
-            'args' : args,
-        }, is_best, epoch, logger.output_directory)
+        # helper.save_checkpoint({ # save checkpoint
+        #     'epoch': epoch,
+        #     'model': model.module.state_dict(),
+        #     'best_result': logger.best_result,
+        #     'optimizer' : optimizer.state_dict(),
+        #     'args' : args,
+        # }, is_best, epoch, logger.output_directory)
 
 
 if __name__ == '__main__':
