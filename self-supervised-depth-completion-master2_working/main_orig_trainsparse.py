@@ -125,6 +125,7 @@ else:
 print(args)
 
 cuda = torch.cuda.is_available() and not args.cpu
+print(torch.cuda.get_device_name(torch.cuda.current_device()))
 if cuda:
     import torch.backends.cudnn as cudnn
     cudnn.benchmark = True
@@ -166,7 +167,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     print("\nTraining")
     prune_type = "sq"  # sq, vlines, nothing
-    square_choice = "latin"
+    square_choice = "latin_sw"
     if prune_type=="sq":
         print(f"Features: squares\n Square choice: {square_choice}")
 
@@ -267,8 +268,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             bin_hor = np.arange(0, 1216, square_size)
             bin_hor = np.append(bin_hor, owidth)
             # filling in the mask with selected squares up to squares_top_num (e.g. 20)
-            print("Number of squares selected: ", len(squares_top))
-            print(squares_top)
+            #print("Number of squares selected: ", len(squares_top))
+            #print(squares_top)
             for it in range(len(squares_top)): #in all but full should be equal to squares_top_num
                 ver = int(squares_top[it][0])
                 hor = int(squares_top[it][1])
