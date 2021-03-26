@@ -65,7 +65,9 @@ def get_paths_and_transform(split, args):
 
         def get_rgb_paths(p):
             ps = p.split('/')
-            pnew = '/'.join([args.data_folder] + ['data_rgb'] + ps[-6:-4] +
+            # pnew = '/'.join([args.data_folder] + ['data_rgb'] + ps[-6:-4] +
+            #                ps[-2:-1] + ['data'] + ps[-1:])
+            pnew = '/'.join([args.data_folder] + ['data_rgb', 'all', ps[-5:-4][0][:10]] + ps[-5:-4] +
                             ps[-2:-1] + ['data'] + ps[-1:])
             return pnew
     elif split == "val":
@@ -165,7 +167,7 @@ params = np.zeros((len(bin_ver2)-1, len(bin_hor2)-1))
 values1  = []
 np.save("value.npy", values1)
 
-def depth_read(filename, depth_mode):
+def depth_read(filename, depth_mode, type_feature):
     # loads depth map D from png file
     # and returns it as a numpy array,
     # for details see readme.txt
@@ -190,7 +192,8 @@ def depth_read(filename, depth_mode):
     if depth_mode=="sparse":
         #alternative velodyne
         #print(filename)
-        
+
+        #getting path of the bin depth file
         if socket.gethostname()!='kamilblade':
            
             path_main = filename[:31]
@@ -217,40 +220,78 @@ def depth_read(filename, depth_mode):
 
         path_binary = os.path.join(path_main, "data_rgb/all", folder1, folder2, "velodyne_points/data", file)
         #print("bin: ", path_binary)
-
         path_folder1 = os.path.join(path_main, "data_rgb/all", folder1)
-
         velo_points = load_from_bin(path_binary)
-
         v2c_filepath = dirname(dirname(dirname(dirname(path_binary)))) + '/calib_velo_to_cam.txt'
         c2c_filepath = dirname(dirname(dirname(dirname(path_binary)))) + '/calib_cam_to_cam.txt'
-
         #velo_path = subdir + '/' + file
 
+        # transforming the binary points and getting lines
         mode='02'
         image_rgb = cv2.imread(path_binary)
         xyz_changed = ego_motion_compute_each_lidar_scan(dirname(path_binary), file)
         velo_points_rectified = velo_point_rectify_egomotion(velo_points, xyz_changed)
         # compute depth, line ids and then project them to camera coords from velo coords
-        coords_, pt_c, pt_dep, line_id, line_c = velo3d_2_camera2d_points(velo_points_rectified,
-                                                                          v_fov=(-24.9, 2.0),
-                                                                          h_fov=(-45, 45),
-                                                                          vc_path=v2c_filepath,
-                                                                          cc_path=c2c_filepath, mode=mode)
-        inds = np.where((coords_[1] >= 139) & (coords_[1] <= 141) & (coords_[0] > 1300))
+        coords_, pt_c, pt_dep, line_id, line_c = velo3d_2_camera2d_points(velo_points_rectified,v_fov=(-24.9, 2.0),h_fov=(-45, 45),vc_path=v2c_filepath,cc_path=c2c_filepath, mode=mode)
+        #inds = np.where((coords_[1] >= 139) & (coords_[1] <= 141) & (coords_[0] > 1300))
+        # coords_.shape
+        # (2, 34326)
 
-        # copying and pruning (last condition)
-        #important_lines = [30,  7, 17, 20,  2,  1,  3,  4]
-        important_lines = np.arange(65)
-        depth_binary = np.zeros_like(depth)
+        #sieve through the points
+        coords_new=[]; line_id_new=[]
         for i in range(len(coords_[0])):
             hor = int(np.floor(coords_[0][i]))
             ver = int(np.floor(coords_[1][i]))
-            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0] and line_c[i] in important_lines:
+            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0]:
+                coords_new.append(coords_[:, i]); line_id_new.append(line_id[i])
+        coords_new = np.array(coords_new)
+        line_id_new = np.array(line_id_new)
+
+        # copying and pruning (last condition)
+        #important_lines = [30,  7, 17, 20,  2,  1,  3,  4]
+        lines_num = 65
+        important_lines = np.arange(lines_num)
+
+        if type_feature=="lines":
+            #line adjustment
+            # create line_ids vecotor with the same number of points for each line,
+            #sample if too many, remove all if too few
+            # it has line number if selected and -1 if not
+            sel_line_id = np.ones(coords_new.shape[0])*(-1)
+            for p in range(lines_num):
+                line_id_inds = np.where(line_id_new==p)[0]
+                pts_sel = 100
+                if len(line_id_inds)>pts_sel:
+                    line_id_inds_rand = np.random.choice(line_id_inds, pts_sel, replace=False)
+                    sel_line_id[line_id_inds_rand]=p
+
+            print(f"pts depth: {len(np.where(sel_line_id>-1)[0])}")
+
+
+        depth_binary = np.zeros_like(depth)
+        # adding depth to the image if it is within the range of the image
+        # and adding a condition of it is part of the line
+        depth_ptsnum=0
+        # for i in range(len(coords_[0])):
+        #     hor = int(np.floor(coords_[0][i]))
+        #     ver = int(np.floor(coords_[1][i]))
+        #     if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0]:
+        #         if line_id[i] in important_lines and new_line_id[i]>-1:
+        #             # depth_ptsnum+=1
+        #             # print(depth_ptsnum)
+        #             depth_binary[ver, hor] = pt_dep[i]
+        #     depth = depth_binary
+        #     depth_points = np.where(depth>0)
+        #     #depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
+        for i in range(coords_new.shape[0]):
+            if type_feature=="lines" and sel_line_id[i]>-1: #selects from all depth points, so that we have the same num for each line
+                hor = int(np.floor(coords_new[i][0]))
+                ver = int(np.floor(coords_new[i][1]))
                 depth_binary[ver, hor] = pt_dep[i]
         depth = depth_binary
-        depth_points = np.where(depth>0)
-        #depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
+        depth_points = np.where(depth > 0)
+        # depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
+
 
         #binning
         size_of_bin = 40
@@ -281,7 +322,9 @@ def depth_read(filename, depth_mode):
 
         bins = bins_2d_depth.statistic
 
-        depth_adjustment(depth, depth_points, bins_2d_depth)
+        if type_feature=="sq":
+            depth_adjustment(depth, depth_points, bins_2d_depth)
+        #depth_adjustment_lines(depth, depth_points)
 
     return depth, bins #375, 1242 #376, 1241
 
@@ -483,6 +526,7 @@ class KittiDepth(data.Dataset):
         self.transform = transform
         self.K = load_calib()
         self.threshold_translation = 0.1
+        self.type_feature = args.type_feature
 
 
 
@@ -490,9 +534,9 @@ class KittiDepth(data.Dataset):
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
-        sparse, bins = depth_read(self.paths['d'][index], "sparse") if \
+        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.type_feature) if \
             (self.paths['d'][index] is not None and self.args.use_d) else None
-        target, bins_gt = depth_read(self.paths['gt'][index], "gt") if \
+        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.type_feature) if \
             self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None

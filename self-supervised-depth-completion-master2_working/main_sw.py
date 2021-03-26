@@ -7,6 +7,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 import torch.nn.functional as F
+from PIL import Image, ImageDraw
 
 
 from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
@@ -79,7 +80,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='gd', #if rgb then use rgb, if gd not rgb then
+                    default='rgbd', #if rgb then use rgb, if gd not rgb then
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -260,19 +261,21 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             phi = F.softplus(mmp)
             S = phi / torch.sum(phi)
             print(S, '*********')
-
             S_numpy= S.detach().cpu()
             switches_2d_argsort = np.argsort(S_numpy, None)
             print(switches_2d_argsort)
-            hor = switches_2d_argsort % S_numpy.shape[1]
-            ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
-            #print(ver,hor)
-            # if switch_mode == "sq":
-            #     print(switches_2d_argsort)
-            # elif switch_mode == "lidar_lines":
-            #     print(torch.argsort(S))
-            np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
-            np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
+
+            if type_feature == "sq":
+
+                hor = switches_2d_argsort % S_numpy.shape[1]
+                ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
+                #print(ver,hor)
+                # if type_feature == "sq":
+                #     print(switches_2d_argsort)
+                # elif type_feature == "lidar_lines":
+                #     print(torch.argsort(S))
+                np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
+                np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
 
         # measure accuracy and record loss
         with torch.no_grad():
@@ -289,6 +292,59 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_save_img_comparison(mode, i, batch_data, pred,
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
+
+        if 1:
+            ma = batch_data['rgb'].detach().cpu().numpy().squeeze()
+            ma  = np.transpose(ma, axes=[1, 2, 0])
+           # ma = np.uint8(ma)
+            #ma2 = Image.fromarray(ma)
+            ma2 = Image.fromarray(np.uint8(ma)).convert('RGB')
+            # create rectangle image
+            img1 = ImageDraw.Draw(ma2)
+
+        if type_feature == "sq":
+            size=40
+            print_square_num = 20
+            for ii in range(print_square_num):
+                s_hor=hor[-ii].detach().cpu().numpy()
+                s_ver=ver[-ii].detach().cpu().numpy()
+                shape = [(s_ver*size, s_hor*size), ((s_ver+1)*size, (s_hor+1)*size)]
+                # s_ver =1
+                # s_hor=0
+                shape = [(s_hor * size, s_ver * size), ((s_hor + 1) * size, (s_ver + 1) * size)]
+                #print("shape: ", shape)
+                img1.rectangle(shape, outline="red")
+
+                tim = time.time()
+                lala = ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
+                print("saving")
+        elif type_feature == "lidar_lines":
+            print_square_num = 20
+            r=1
+            parameter_mask = np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)
+
+            # for m in range(10,50):
+            #     im = Image.fromarray(parameter_mask[m]*155)
+            #     im = im.convert('1')  # convert image to black and white
+            #     im.save(f"switches_photos/lala_{m}.jpg")
+
+
+            for ii in range(print_square_num):
+                 points = parameter_mask[ii]
+                 y = np.where(points==1)[0]
+                 x = np.where(points == 1)[1]
+
+                 for p in range(len(x)):
+                     img1.ellipse((x[p] - r, y[p] - r, x[p] + r, y[p] + r), fill=(255, 0, 0, 0))
+
+            tim = time.time()
+            lala = ma2.save(f"switches_photos/lines/lines_{tim}.jpg")
+            print("saving")
+
+
+
+
+
 
         if 0:#i % 100 ==0:
 
@@ -345,10 +401,10 @@ def main():
 
     print("=> creating model and optimizer ... ", end='')
 
-    global switch_mode; switch_mode = "sq"
-    if switch_mode == "sq":
+    global type_feature; type_feature = "lidar_lines"
+    if type_feature == "sq":
         model = DepthCompletionNetQSquare(args).to(device)
-    elif switch_mode == "lidar_lines":
+    elif type_feature == "lidar_lines":
         model = DepthCompletionNetQ(args).to(device)
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
@@ -367,7 +423,7 @@ def main():
     # Data loading code
     print("=> creating data loaders ... ")
     if not is_eval:
-        train_dataset = KittiDepth('train', args)
+        train_dataset = KittiDepth('train', args, "lines")
         train_loader = torch.utils.data.DataLoader(train_dataset,
                                                    batch_size=args.batch_size,
                                                    shuffle=True,
@@ -375,7 +431,7 @@ def main():
                                                    pin_memory=True,
                                                    sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
-    val_dataset = KittiDepth('val', args)
+    val_dataset = KittiDepth('val', args, 'lines')
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=1,

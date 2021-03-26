@@ -123,6 +123,18 @@ def velo_points_filter(points, angles, v_fov, h_fov):
 
     return xyz_, color, depth_lim, angles_lim, angle_c
 
+# xyz_.shape
+# (4, 31861)
+# #color.shape
+# #(31861,)
+# angles_lim.shape
+#  (31861, 1)
+# depth_lim.shape
+# (31861,)
+# angle_c.shape
+#  (31861, 1)
+
+
 
 # In[6]:
 
@@ -237,6 +249,22 @@ def velo3d_2_camera2d_points(points, v_fov, h_fov, vc_path, cc_path, mode='02'):
              [ 1  ,  1  , .. ]
     """
     xyz_v, c_, depth, line_ids, line_c = velo_points_filter(points, line_ids, v_fov, h_fov)
+
+    # xyz_.shape
+    # (4, 31861)
+    # #color.shape /c_
+    # #(31861,)
+    # angles_lim.shape  /depth
+    #  (31861, 1)
+    # depth_lim.shape / line_ids
+    # (31861,)
+    # angle_c.shape / line_c
+    #  (31861, 1)
+
+    # len(np.where(line_c == 36)[0])
+    # 282
+    # len(np.where(line_ids == 20)[0])
+    # 282
 
     """
     RT_ - rotation matrix & translation matrix
