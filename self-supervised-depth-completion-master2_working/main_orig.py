@@ -20,7 +20,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
-                    default=4,
+                    default=0,
                     type=int,
                     metavar='N',
                     help='number of data loading workers (default: 4)')
@@ -77,7 +77,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='d', #'gd'
+                    default='rgbd', #'gd'
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -112,6 +112,7 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
+parser.add_argument('--type_feature', default='lines')
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -259,7 +260,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        if i % 100 ==0:
+        if i % 200 ==0:
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
@@ -274,7 +275,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 'best_result': logger.best_result,
                 'optimizer': optimizer.state_dict(),
                 'args': args,
-            }, is_best, epoch, logger.output_directory)
+            }, is_best, epoch, logger.output_directory, i, args.type_feature)
 
     return avg, is_best
 
