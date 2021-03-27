@@ -275,7 +275,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 'best_result': logger.best_result,
                 'optimizer': optimizer.state_dict(),
                 'args': args,
-            }, is_best, epoch, logger.output_directory, i, args.type_feature)
+            }, is_best, epoch, logger.output_directory, args.type_feature, i)
 
     return avg, is_best
 
@@ -375,7 +375,7 @@ def main():
             'best_result': logger.best_result,
             'optimizer' : optimizer.state_dict(),
             'args' : args,
-        }, is_best, epoch, logger.output_directory)
+        }, is_best, epoch, logger.output_directory, args.type_feature)
 
 
 if __name__ == '__main__':
