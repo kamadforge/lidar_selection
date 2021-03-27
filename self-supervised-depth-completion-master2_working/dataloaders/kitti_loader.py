@@ -205,7 +205,6 @@ def depth_read(filename, depth_mode, type_feature):
                 folder1 = filename[83:93]
                 folder2 = filename[83:109]
                 file = filename[-23:-13] + ".bin"
-                
         else:
         
             path_main = filename[:47]
@@ -233,9 +232,6 @@ def depth_read(filename, depth_mode, type_feature):
         velo_points_rectified = velo_point_rectify_egomotion(velo_points, xyz_changed)
         # compute depth, line ids and then project them to camera coords from velo coords
         coords_, pt_c, pt_dep, line_id, line_c = velo3d_2_camera2d_points(velo_points_rectified,v_fov=(-24.9, 2.0),h_fov=(-45, 45),vc_path=v2c_filepath,cc_path=c2c_filepath, mode=mode)
-        #inds = np.where((coords_[1] >= 139) & (coords_[1] <= 141) & (coords_[0] > 1300))
-        # coords_.shape
-        # (2, 34326)
 
         #sieve through the points
         coords_new=[]; line_id_new=[]
@@ -264,67 +260,55 @@ def depth_read(filename, depth_mode, type_feature):
                 if len(line_id_inds)>pts_sel:
                     line_id_inds_rand = np.random.choice(line_id_inds, pts_sel, replace=False)
                     sel_line_id[line_id_inds_rand]=p
-
             print(f"pts depth: {len(np.where(sel_line_id>-1)[0])}")
 
-
+        #copying points from (num_pts,2) shape to the (y_im, x_im, depth)
+        # for both squares and lines
         depth_binary = np.zeros_like(depth)
-        # adding depth to the image if it is within the range of the image
-        # and adding a condition of it is part of the line
-        depth_ptsnum=0
-        # for i in range(len(coords_[0])):
-        #     hor = int(np.floor(coords_[0][i]))
-        #     ver = int(np.floor(coords_[1][i]))
-        #     if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0]:
-        #         if line_id[i] in important_lines and new_line_id[i]>-1:
-        #             # depth_ptsnum+=1
-        #             # print(depth_ptsnum)
-        #             depth_binary[ver, hor] = pt_dep[i]
-        #     depth = depth_binary
-        #     depth_points = np.where(depth>0)
-        #     #depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
         for i in range(coords_new.shape[0]):
-            if type_feature=="lines" and sel_line_id[i]>-1: #selects from all depth points, so that we have the same num for each line
+            # selects from all depth points, so that we have the same num for each line
+            if type_feature=="sq" or (sel_line_id[i]>-1 and type_feature=="lines"):
                 hor = int(np.floor(coords_new[i][0]))
                 ver = int(np.floor(coords_new[i][1]))
                 depth_binary[ver, hor] = pt_dep[i]
         depth = depth_binary
         depth_points = np.where(depth > 0)
-        # depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
-
-
-        #binning
-        size_of_bin = 40
-        #print(depth.shape)
-        bin_ver=np.arange(0, oheight, size_of_bin)
-        bin_ver=np.append(bin_ver, oheight)
-        bin_hor=np.arange(0, owidth, size_of_bin)
-        bin_hor = np.append(bin_hor, owidth)
-        values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]] # look at pixels with non-0 depth
-        #bin function
-        bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range= [[0, owidth], [0, oheight]])
-        #print("bins shape", bins_2d_depth.statistic.shape)
-
-        #saving the bins
-        # if os.path.isfile("value.npy"):
-        #     values1 = np.load("value.npy", allow_pickle=True)
-        # else:
-        #     values1  = []
-        # if len(values1)==0:
-        #     values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
-        # else:
-        #     values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
-        # np.save("value.npy", values1)
-        # #print(values1.shape)
-        # #with np.printoptions(suppress=True, precision=3):
-        # #    print(np.mean(values1, axis=0))
-        # del values1
-
-        bins = bins_2d_depth.statistic
 
         if type_feature=="sq":
-            depth_adjustment(depth, depth_points, bins_2d_depth)
-        #depth_adjustment_lines(depth, depth_points)
+
+            #binning
+            size_of_bin = 40
+            #print(depth.shape)
+            bin_ver=np.arange(0, oheight, size_of_bin)
+            bin_ver=np.append(bin_ver, oheight)
+            bin_hor=np.arange(0, owidth, size_of_bin)
+            bin_hor = np.append(bin_hor, owidth)
+            values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]] # look at pixels with non-0 depth
+            #bin function
+            bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range= [[0, owidth], [0, oheight]])
+            #print("bins shape", bins_2d_depth.statistic.shape)
+
+            #saving the bins
+            # if os.path.isfile("value.npy"):
+            #     values1 = np.load("value.npy", allow_pickle=True)
+            # else:
+            #     values1  = []
+            # if len(values1)==0:
+            #     values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
+            # else:
+            #     values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
+            # np.save("value.npy", values1)
+            # #print(values1.shape)
+            # #with np.printoptions(suppress=True, precision=3):
+            # #    print(np.mean(values1, axis=0))
+            # del values1
+
+            bins = bins_2d_depth.statistic
+
+            depth = depth_adjustment(depth, depth_points, bins_2d_depth)
+
+
+        print(f"Number of depth points: {len(np.where(depth>0)[0])}")
 
     return depth, bins #375, 1242 #376, 1241
 
