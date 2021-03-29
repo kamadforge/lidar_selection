@@ -112,7 +112,7 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default='sq')
+parser.add_argument('--type_feature', default=None, choices=["sq", "lines", None])
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -260,7 +260,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        if i % 200 ==0:
+        if i % 50 ==0:
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
