@@ -77,7 +77,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='rgbd', #'gd'
+                    default='d', #'gd'
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',

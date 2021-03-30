@@ -22,7 +22,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
-                    default=4, #4
+                    default=0, #4
                     type=int,
                     metavar='N',
                     help='number of data loading workers (default: 4)')
@@ -240,8 +240,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             key: val.to(device)
             for key, val in batch_data.items() if val is not None
         }
-        gt = batch_data[
-            'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+        gt = batch_data['gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
         data_time = time.time() - start
 
 
@@ -264,8 +263,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         features = encoder(batch_data['rgb'])
         outputs = decoder(features)
 
-        if i % 20 == 0:
-            print(outputs[('disp', 0)][1,0,:,40])
+        # if i % 20 == 0:
+        #     print(outputs[('disp', 0)][1,0,:,40])
 
         # pred = model(batch_data)
         # im = batch_data['d'].detach().cpu().numpy()
@@ -286,9 +285,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             elif 'dense' in args.train_mode:
                 depth_loss = depth_criterion(pred, gt)
                 mask = (gt < 1e-3).float()
-                if i % 20 == 0:
-                    print("\n\n\n gt \n")
-                    print(gt[1,0,:,40])
+                # if i % 20 == 0:
+                #     print("\n\n\n gt \n")
+                #     print(gt[1,0,:,40])
 
             # # Loss 2: the self-supervised photometric loss
             # if args.use_pose:
@@ -411,35 +410,25 @@ def main():
     ################# model
 
     print("=> creating model and optimizer ... ", end='')
-    ############# MODEL
-
     parameters_to_train = []
     encoder = networks.ResnetEncoder(num_layers=18)
     encoder.to(device)
     parameters_to_train += list(encoder.parameters())
-
     decoder = networks.DepthDecoder(encoder.num_ch_enc)
     decoder.to(device)
     parameters_to_train += list(decoder.parameters())
-    ##############
-
     # encoder_named_params = [
     #     p for _, p in encoder.named_parameters() if p.requires_grad
     # ]
-    optimizer = torch.optim.Adam(parameters_to_train,
-                                 lr=args.lr,
-                                 weight_decay=args.weight_decay)
-
-
+    optimizer = torch.optim.Adam(parameters_to_train, lr=args.lr, weight_decay=args.weight_decay)
+    encoder = torch.nn.DataParallel(encoder)
+    decoder = torch.nn.DataParallel(decoder)
+    model = [encoder, decoder]
     print("completed.")
     # if checkpoint is not None:
     #     model.load_state_dict(checkpoint['model'])
     #     optimizer.load_state_dict(checkpoint['optimizer'])
     #     print("=> checkpoint state loaded.")
-
-    encoder = torch.nn.DataParallel(encoder)
-    decoder = torch.nn.DataParallel(decoder)
-
 
 
     # Data loading code
@@ -470,11 +459,10 @@ def main():
     #     logger.best_result = checkpoint['best_result']
     print("=> logger created.")
 
-    model = [encoder, decoder]
+
     if is_eval:
         print("=> starting model evaluation ...")
-        result, is_best = iterate("val", args, val_loader, model, None, logger,
-                                  checkpoint['epoch'])
+        result, is_best = iterate("val", args, val_loader, model, None, logger,checkpoint['epoch'])
         return
 
     # main loop

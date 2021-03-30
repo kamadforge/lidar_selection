@@ -65,7 +65,9 @@ def get_paths_and_transform(split, args):
 
         def get_rgb_paths(p):
             ps = p.split('/')
-            pnew = '/'.join([args.data_folder] + ['data_rgb'] + ps[-6:-4] +
+            # pnew = '/'.join([args.data_folder] + ['data_rgb'] + ps[-6:-4] +
+            #                 ps[-2:-1] + ['data'] + ps[-1:])
+            pnew = '/'.join([args.data_folder] + ['data_rgb', 'all', ps[-5:-4][0][:10]] + ps[-5:-4] +
                             ps[-2:-1] + ['data'] + ps[-1:])
             return pnew
     elif split == "val":
