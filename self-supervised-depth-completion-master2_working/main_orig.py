@@ -112,7 +112,7 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default=None, choices=["sq", "lines", None])
+parser.add_argument('--type_feature', default=None, choices=["sq", "lines", "None"])
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)

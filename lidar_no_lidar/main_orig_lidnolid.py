@@ -136,6 +136,7 @@ if cuda:
 else:
     device = torch.device("cpu")
 print("=> using '{}' for computation.".format(device))
+print(torch.cuda.get_device_name(torch.cuda.current_device()))
 
 # define loss functions
 depth_criterion = criteria.MaskedMSELoss() if (
