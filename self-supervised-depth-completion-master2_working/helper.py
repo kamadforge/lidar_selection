@@ -222,7 +222,7 @@ def adjust_learning_rate(lr_init, optimizer, epoch):
     return lr
 
 
-def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0):
+def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, every=50):
 
     if is_best:
         checkpoint_filename = os.path.join(output_directory, f'checkpoint-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
@@ -230,9 +230,10 @@ def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0):
 
         # best_filename = os.path.join(output_directory, f'model_best-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
         # shutil.copyfile(checkpoint_filename, best_filename)
-    if epoch > 0:
+    #if epoch > 0:
+    if 1:
         prev_checkpoint_filename = os.path.join(
-            output_directory, f'checkpoint-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
+            output_directory, f'checkpoint-{str(epoch - 1)}_i_{i-every}_typefeature_{type_feature}.pth.tar')
         if os.path.exists(prev_checkpoint_filename):
             os.remove(prev_checkpoint_filename)
 

@@ -111,6 +111,8 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
+parser.add_argument('--type_feature', default="None", choices=["sq", "lines", "None"])
+
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -364,7 +366,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        if i % 10 ==0: #every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
+        if i % 50 ==0: #every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
@@ -377,7 +379,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 'best_result': logger.best_result,
                 'optimizer': optimizer.state_dict(),
                 'args': args,
-            }, is_best, epoch, logger.output_directory)
+            }, is_best, epoch, logger.output_directory, args.type_feature)
 
     return avg, is_best
 
@@ -477,7 +479,7 @@ def main():
             'best_result': logger.best_result,
             'optimizer' : optimizer.state_dict(),
             'args' : args,
-        }, is_best, epoch, logger.output_directory)
+        }, is_best, epoch, logger.output_directory, args.type_feature)
 
 
 if __name__ == '__main__':

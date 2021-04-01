@@ -110,8 +110,7 @@ parser.add_argument(
     '--train-mode',
     type=str,
     default="dense",
-    choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
-    help='dense | sparse | photo | sparse+photo | dense+photo')
+    choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"])
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
