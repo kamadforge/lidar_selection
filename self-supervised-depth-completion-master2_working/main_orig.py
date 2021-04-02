@@ -13,6 +13,7 @@ from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
+from depth_manipulation import depth_adjustment
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -77,7 +78,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='gd', #'gd' greyscale and depth
+                    default='rgbd', #'gd' greyscale and depth
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -107,12 +108,12 @@ parser.add_argument(
     '-m',
     '--train-mode',
     type=str,
-    default="sparse",
+    default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="None", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -168,9 +169,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         lr = 0
 
     torch.set_printoptions(profile="full")
+    table_is=np.zeros(400)
     for i, batch_data in enumerate(loader):
-
-
 
 
         start = time.time()
@@ -180,6 +180,21 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         }
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+
+        depth_adjust=False
+        if depth_adjust:
+            depth_new, table_i = depth_adjustment(gt, True)
+            table_is+=table_i
+            # many_points = np.where(table_is==i+1)[0]
+            # print(many_points)
+            # print(len(many_points))
+            #print(np.argsort(-table_is)[:30])
+            #print(np.sort(-table_is)[:30])
+            gt = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
+
+
+
+
         data_time = time.time() - start
 
         start = time.time()

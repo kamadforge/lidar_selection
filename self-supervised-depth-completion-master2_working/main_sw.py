@@ -16,6 +16,7 @@ from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
+from depth_manipulation import depth_adjustment
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,7 +81,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='rgbd', #if rgb then use rgb, if gd not rgb then
+                    default='gd', #if rgb then use rgb, if gd not rgb then
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -115,6 +116,8 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -180,6 +183,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         }
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+
+        depth_adjustment(gt, False)
+
         data_time = time.time() - start
 
         start = time.time()
@@ -260,19 +266,27 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             mmp = 1000 * model.module.parameter
             phi = F.softplus(mmp)
             S = phi / torch.sum(phi)
-            print(S, '*********')
+            #print(S, '*********')
             S_numpy= S.detach().cpu()
-            switches_2d_argsort = np.argsort(S_numpy, None)
-            print(switches_2d_argsort)
+            switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
+            switches_2d_sort = np.sort(S_numpy, None)
+            print("Switches: ")
+            print(switches_2d_argsort[:10])
+            print(switches_2d_sort[:10])
+            print("and")
+            print(switches_2d_argsort[-10:])
+            print(switches_2d_sort[-10:])
 
-            if type_feature == "sq":
+            if args.type_feature == "sq":
 
                 hor = switches_2d_argsort % S_numpy.shape[1]
                 ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
-                #print(ver,hor)
+                print(ver[:10],hor[:10])
+                print("and")
+                print(ver[-10:], hor[-10:])
                 # if type_feature == "sq":
                 #     print(switches_2d_argsort)
-                # elif type_feature == "lidar_lines":
+                # elif type_feature == "lines":
                 #     print(torch.argsort(S))
                 np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
                 np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
@@ -293,7 +307,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        if 1:
+        draw=False
+        if draw:
             ma = batch_data['rgb'].detach().cpu().numpy().squeeze()
             ma  = np.transpose(ma, axes=[1, 2, 0])
            # ma = np.uint8(ma)
@@ -302,23 +317,23 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # create rectangle image
             img1 = ImageDraw.Draw(ma2)
 
-        if type_feature == "sq":
+        if args.type_feature == "sq":
             size=40
             print_square_num = 20
             for ii in range(print_square_num):
                 s_hor=hor[-ii].detach().cpu().numpy()
                 s_ver=ver[-ii].detach().cpu().numpy()
-                shape = [(s_ver*size, s_hor*size), ((s_ver+1)*size, (s_hor+1)*size)]
-                # s_ver =1
-                # s_hor=0
+                #print("Top square switches: ")
+                #print(s_ver, s_hor)
                 shape = [(s_hor * size, s_ver * size), ((s_hor + 1) * size, (s_ver + 1) * size)]
                 #print("shape: ", shape)
-                img1.rectangle(shape, outline="red")
+                if draw:
+                    img1.rectangle(shape, outline="red")
 
-                tim = time.time()
-                lala = ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
-                print("saving")
-        elif type_feature == "lidar_lines":
+                    tim = time.time()
+                    lala = ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
+                    print("saving")
+        elif type_feature == "lines":
             print_square_num = 20
             r=1
             parameter_mask = np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)
@@ -401,10 +416,10 @@ def main():
 
     print("=> creating model and optimizer ... ", end='')
 
-    global type_feature; type_feature = "lidar_lines"
-    if type_feature == "sq":
+
+    if args.type_feature == "sq":
         model = DepthCompletionNetQSquare(args).to(device)
-    elif type_feature == "lidar_lines":
+    elif args.type_feature == "lines":
         model = DepthCompletionNetQ(args).to(device)
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
@@ -423,7 +438,7 @@ def main():
     # Data loading code
     print("=> creating data loaders ... ")
     if not is_eval:
-        train_dataset = KittiDepth('train', args, "lines")
+        train_dataset = KittiDepth('train', args)
         train_loader = torch.utils.data.DataLoader(train_dataset,
                                                    batch_size=args.batch_size,
                                                    shuffle=True,
@@ -431,7 +446,7 @@ def main():
                                                    pin_memory=True,
                                                    sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
-    val_dataset = KittiDepth('val', args, 'lines')
+    val_dataset = KittiDepth('val', args)
     val_loader = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=1,

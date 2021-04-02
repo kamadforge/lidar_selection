@@ -306,10 +306,11 @@ def depth_read(filename, depth_mode, type_feature):
 
             bins = bins_2d_depth.statistic
 
-            depth = depth_adjustment(depth, depth_points, bins_2d_depth)
+            #uncomment!
+            #depth = depth_adjustment(depth, depth_points, bins_2d_depth)
 
 
-        print(f"Number of depth points: {len(np.where(depth>0)[0])}")
+        #print(f"Number of depth points: {len(np.where(depth>0)[0])}")
 
     return depth, bins #375, 1242 #376, 1241
 

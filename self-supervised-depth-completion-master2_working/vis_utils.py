@@ -55,10 +55,10 @@ def save_depth_as_uint16png(img, filename):
     cv2.imwrite(filename, img)
 
 
-if ("DISPLAY" in os.environ):
-    f, axarr = plt.subplots(4, 1)
-    plt.tight_layout()
-    plt.ion()
+# if ("DISPLAY" in os.environ):
+#     f, axarr = plt.subplots(4, 1)
+#     plt.tight_layout()
+#     plt.ion()
 
 
 def display_warping(rgb_tgt, pred_tgt, warped):
