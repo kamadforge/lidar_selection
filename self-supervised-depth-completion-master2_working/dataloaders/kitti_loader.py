@@ -167,7 +167,7 @@ params = np.zeros((len(bin_ver2)-1, len(bin_hor2)-1))
 values1  = []
 np.save("value.npy", values1)
 
-def depth_read(filename, depth_mode, type_feature):
+def depth_read(filename, depth_mode, type_feature, depth_source):
     # loads depth map D from png file
     # and returns it as a numpy array,
     # for details see readme.txt
@@ -187,9 +187,9 @@ def depth_read(filename, depth_mode, type_feature):
     depth = np.expand_dims(depth, -1)
     #print(depth[140][-100:].squeeze())
 
-
+    # reading sparse from binary files
     bins = None
-    if depth_mode=="sparse":
+    if depth_mode=="sparse" and depth_source=="bin":
         #alternative velodyne
         #print(filename)
 
@@ -254,13 +254,27 @@ def depth_read(filename, depth_mode, type_feature):
             #sample if too many, remove all if too few
             # it has line number if selected and -1 if not
             sel_line_id = np.ones(coords_new.shape[0])*(-1)
+            line_pts_num=np.zeros(lines_num)
+            # counting the number of points in the line
+            if "line_pts_num_all" not in globals():
+                global line_pts_num_all
+                line_pts_num_all=np.zeros(lines_num)
             for p in range(lines_num):
                 line_id_inds = np.where(line_id_new==p)[0]
+                line_pts_num[p] = len(line_id_inds)
                 pts_sel = 100
-                if len(line_id_inds)>pts_sel:
+                lines_selected=np.arange(65)
+                #lines_selected=[6,8,10,12]
+                if len(line_id_inds)>pts_sel and p in lines_selected:
                     line_id_inds_rand = np.random.choice(line_id_inds, pts_sel, replace=False)
                     sel_line_id[line_id_inds_rand]=p
-            print(f"pts depth: {len(np.where(sel_line_id>-1)[0])}")
+            print(f"\n\npts depth: {len(np.where(sel_line_id>-1)[0])}")
+            line_pts_num_all+=line_pts_num
+            np.set_printoptions(suppress=True)
+            print(f"line ids nums: {line_pts_num_all}")
+            print("lines by num of points: ", np.argsort(-line_pts_num_all))
+
+    if depth_mode=="sparse" and depth_source=="bin":
 
         #copying points from (num_pts,2) shape to the (y_im, x_im, depth)
         # for both squares and lines
@@ -269,48 +283,55 @@ def depth_read(filename, depth_mode, type_feature):
             # selects from all depth points, so that we have the same num for each line
             if type_feature=="sq" or type_feature=="None" or (sel_line_id[i]>-1 and type_feature=="lines"):
                 hor = int(np.floor(coords_new[i][0]))
-                hor = int(np.floor(coords_new[i][0]))
                 ver = int(np.floor(coords_new[i][1]))
                 depth_binary[ver, hor] = pt_dep[i]
         depth = depth_binary
+
+
+    if type_feature=="sq": #both for im and bin sprase mode
+
         depth_points = np.where(depth > 0)
+        #binning
+        size_of_bin = 40
+        #print(depth.shape)
+        bin_ver=np.arange(0, oheight, size_of_bin)
+        bin_ver=np.append(bin_ver, oheight)
+        bin_hor=np.arange(0, owidth, size_of_bin)
+        bin_hor = np.append(bin_hor, owidth)
+        values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]] # look at pixels with non-0 depth
+        #bin function
+        bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range= [[0, owidth], [0, oheight]])
+        #print("bins shape", bins_2d_depth.statistic.shape)
 
-        if type_feature=="sq":
+        #saving the bins
+        # if os.path.isfile("value.npy"):
+        #     values1 = np.load("value.npy", allow_pickle=True)
+        # else:
+        #     values1  = []
+        # if len(values1)==0:
+        #     values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
+        # else:
+        #     values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
+        # np.save("value.npy", values1)
+        # #print(values1.shape)
+        # #with np.printoptions(suppress=True, precision=3):
+        # #    print(np.mean(values1, axis=0))
+        # del values1
 
-            #binning
-            size_of_bin = 40
-            #print(depth.shape)
-            bin_ver=np.arange(0, oheight, size_of_bin)
-            bin_ver=np.append(bin_ver, oheight)
-            bin_hor=np.arange(0, owidth, size_of_bin)
-            bin_hor = np.append(bin_hor, owidth)
-            values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]] # look at pixels with non-0 depth
-            #bin function
-            bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range= [[0, owidth], [0, oheight]])
-            #print("bins shape", bins_2d_depth.statistic.shape)
+        bins = bins_2d_depth.statistic
 
-            #saving the bins
-            # if os.path.isfile("value.npy"):
-            #     values1 = np.load("value.npy", allow_pickle=True)
-            # else:
-            #     values1  = []
-            # if len(values1)==0:
-            #     values1=np.expand_dims(bins_2d_depth.statistic, axis=0)
-            # else:
-            #     values1 = np.concatenate((values1, np.expand_dims(bins_2d_depth.statistic, axis=0)))
-            # np.save("value.npy", values1)
-            # #print(values1.shape)
-            # #with np.printoptions(suppress=True, precision=3):
-            # #    print(np.mean(values1, axis=0))
-            # del values1
-
-            bins = bins_2d_depth.statistic
-
-            #uncomment!
-            #depth = depth_adjustment(depth, depth_points, bins_2d_depth)
+        #uncomment!
+        #depth = depth_adjustment(depth, depth_points, bins_2d_depth)
 
 
-        #print(f"Number of depth points: {len(np.where(depth>0)[0])}")
+    #print(f"Number of depth points: {len(np.where(depth>0)[0])}")
+
+
+    if depth_source:
+        print("kitti loader:")
+        print(f"depth {depth_mode} and {depth_source} pts: ", len(np.where(depth)[0] > 0))
+    else:
+        print(f"depth {depth_mode} pts: ", len(np.where(depth)[0] > 0))
 
     return depth, bins #375, 1242 #376, 1241
 
@@ -513,6 +534,7 @@ class KittiDepth(data.Dataset):
         self.K = load_calib()
         self.threshold_translation = 0.1
         self.type_feature = args.type_feature
+        self.sparse_depth_source = args.sparse_depth_source
 
 
 
@@ -520,9 +542,9 @@ class KittiDepth(data.Dataset):
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
-        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.type_feature) if \
+        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.type_feature, self.sparse_depth_source) if \
             (self.paths['d'][index] is not None and self.args.use_d) else None
-        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.type_feature) if \
+        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.type_feature, self.sparse_depth_source) if \
             self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
