@@ -58,6 +58,13 @@ def depth_adjustment(depth, adjust):
     print(A_2d_argsort[-10:])
     print("num of points: ", A_2d_sort[-10:])
 
+    #### 
+
+    ###
+
+    points_wanted_num = 50
+    points_choice = "random"
+    print(f"adjust: {adjust}, points_wanted_num: {points_wanted_num}, points_choice: {points_choice}")
 
     if adjust:
         depth_new = np.zeros_like(depth)
@@ -68,19 +75,15 @@ def depth_adjustment(depth, adjust):
             #print("bin", i)
             bin_i_points = np.where(bins_2d_depth[3] == i)[0]
             #print(bin_i_points)
-
-            points_wanted_num = 50
-            points_choice = "random"
             #if the big bin has at least one points
             if len(bin_i_points)>points_wanted_num:
-
                 table_i[i]+=1
                 if points_choice == "random":
                     points_chosen = np.random.choice(bin_i_points, points_wanted_num, replace=False)
                     for j in points_chosen:
                         depth_new[depth_points[0][j], depth_points[1][j]] = depth[depth_points[0][j], depth_points[1][j]]
 
-                else:
+                else: #grid of points
                     # get the corner of the bin square from which the point comes
                     corner = [depth_points[0][bin_i_points[0]] - [depth_points[0][bin_i_points[0]] % 40], depth_points[1][bin_i_points[0]] - [depth_points[1][bin_i_points[0]] % 40]]
                     bin_sub_ver = np.linspace(corner[0], corner[0]+40, 5 ) #four bins 10 pixels each

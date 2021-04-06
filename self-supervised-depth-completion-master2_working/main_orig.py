@@ -78,7 +78,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='rgbd', #'gd' greyscale and depth
+                    default='d', #'gd' greyscale and depth
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -108,12 +108,15 @@ parser.add_argument(
     '-m',
     '--train-mode',
     type=str,
-    default="dense",
+    default="sparse",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--depth_adjust', default=0, type=int)
+parser.add_argument('--sparse_depth_source', default='nonbin')
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -127,6 +130,15 @@ if args.use_pose:
 else:
     args.w1, args.w2 = 0, 0
 print(args)
+
+
+print("\nEvaluate: ", args.evaluate)
+print(f"input: {args.input} from {args.sparse_depth_source}")
+if args.depth_adjust:
+    print("with depth adjust in main_orig to squares")
+else:
+    print("vanilla full depth")
+print(f"\noutput (only for training): {args.train_mode}\n")
 
 cuda = torch.cuda.is_available() and not args.cpu
 if cuda:
@@ -181,24 +193,25 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
 
-        depth_adjust=False
+        depth_adjust=args.depth_adjust
         if depth_adjust:
-            depth_new, table_i = depth_adjustment(gt, True)
+            depth_new, table_i = depth_adjustment(batch_data['d'], True)
             table_is+=table_i
             # many_points = np.where(table_is==i+1)[0]
             # print(many_points)
             # print(len(many_points))
             #print(np.argsort(-table_is)[:30])
             #print(np.sort(-table_is)[:30])
-            gt = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
-
-
-
+            batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
 
         data_time = time.time() - start
 
         start = time.time()
-        pred = model(batch_data)
+        if mode=="train":
+            pred = model(batch_data)
+        else:
+            with torch.no_grad():
+                pred = model(batch_data)
         # im = batch_data['d'].detach().cpu().numpy()
         # im_sq = im.squeeze()
         # plt.figure()
@@ -276,7 +289,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_save_pred(mode, i, pred, epoch)
 
         every=50
-        if i % every ==0:
+        if i % every ==0 and mode != "val":
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
@@ -307,8 +320,11 @@ def main():
                   end='')
             checkpoint = torch.load(args.evaluate, map_location=device)
             args = checkpoint['args']
+            args.type_feature = args_new.type_feature
             args.data_folder = args_new.data_folder
             args.val = args_new.val
+            args.sparse_depth_source = args_new.sparse_depth_source
+            args.depth_adjust = args_new.depth_adjust
             is_eval = True
             print("Completed.")
         else:
@@ -322,6 +338,7 @@ def main():
             checkpoint = torch.load(args.resume, map_location=device)
             args.start_epoch = checkpoint['epoch'] + 1
             args.data_folder = args_new.data_folder
+            args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
             print("Completed. Resuming from epoch {}.".format(
                 checkpoint['epoch']))
@@ -361,7 +378,7 @@ def main():
         val_dataset,
         batch_size=1,
         shuffle=False,
-        num_workers=2,
+        num_workers=0,
         pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 
@@ -373,8 +390,7 @@ def main():
 
     if is_eval:
         print("=> starting model evaluation ...")
-        result, is_best = iterate("val", args, val_loader, model, None, logger,
-                                  checkpoint['epoch'])
+        result, is_best = iterate("val", args, val_loader, model, None, logger, checkpoint['epoch'])
         return
 
     # main loop
