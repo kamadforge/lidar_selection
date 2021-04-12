@@ -117,6 +117,7 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--sparse_depth_source', default='nonbin')
 
 
 args = parser.parse_args()
@@ -184,7 +185,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
 
-        depth_adjustment(gt, False)
+        if args.type_feature=="sq":
+            depth_adjustment(gt, False)
 
         data_time = time.time() - start
 
@@ -207,6 +209,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # mask=1 indicates that a pixel does not ground truth labels
             if 'sparse' in args.train_mode:
                 depth_loss = depth_criterion(pred, batch_data['d'])
+                print("d pts: ", len(torch.where(batch_data['d']>0)[0]))
                 mask = (batch_data['d'] < 1e-3).float()
             elif 'dense' in args.train_mode:
                 depth_loss = depth_criterion(pred, gt)
@@ -317,51 +320,51 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # create rectangle image
             img1 = ImageDraw.Draw(ma2)
 
-        if args.type_feature == "sq":
-            size=40
-            print_square_num = 20
-            for ii in range(print_square_num):
-                s_hor=hor[-ii].detach().cpu().numpy()
-                s_ver=ver[-ii].detach().cpu().numpy()
-                #print("Top square switches: ")
-                #print(s_ver, s_hor)
-                shape = [(s_hor * size, s_ver * size), ((s_hor + 1) * size, (s_ver + 1) * size)]
-                #print("shape: ", shape)
-                if draw:
+            if args.type_feature == "sq":
+                size=40
+                print_square_num = 20
+                for ii in range(print_square_num):
+                    s_hor=hor[-ii].detach().cpu().numpy()
+                    s_ver=ver[-ii].detach().cpu().numpy()
+                    #print("Top square switches: ")
+                    #print(s_ver, s_hor)
+                    shape = [(s_hor * size, s_ver * size), ((s_hor + 1) * size, (s_ver + 1) * size)]
+                    #print("shape: ", shape)
+
                     img1.rectangle(shape, outline="red")
 
                     tim = time.time()
                     lala = ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
                     print("saving")
-        elif type_feature == "lines":
-            print_square_num = 20
-            r=1
-            parameter_mask = np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)
+            elif args.type_feature == "lines":
+                print_square_num = 20
+                r=1
+                parameter_mask = np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)
 
-            # for m in range(10,50):
-            #     im = Image.fromarray(parameter_mask[m]*155)
-            #     im = im.convert('1')  # convert image to black and white
-            #     im.save(f"switches_photos/lala_{m}.jpg")
-
-
-            for ii in range(print_square_num):
-                 points = parameter_mask[ii]
-                 y = np.where(points==1)[0]
-                 x = np.where(points == 1)[1]
-
-                 for p in range(len(x)):
-                     img1.ellipse((x[p] - r, y[p] - r, x[p] + r, y[p] + r), fill=(255, 0, 0, 0))
-
-            tim = time.time()
-            lala = ma2.save(f"switches_photos/lines/lines_{tim}.jpg")
-            print("saving")
+                # for m in range(10,50):
+                #     im = Image.fromarray(parameter_mask[m]*155)
+                #     im = im.convert('1')  # convert image to black and white
+                #     im.save(f"switches_photos/lala_{m}.jpg")
 
 
+                for ii in range(print_square_num):
+                     points = parameter_mask[ii]
+                     y = np.where(points==1)[0]
+                     x = np.where(points == 1)[1]
+
+                     for p in range(len(x)):
+                         img1.ellipse((x[p] - r, y[p] - r, x[p] + r, y[p] + r), fill=(255, 0, 0, 0))
+
+                tim = time.time()
+                lala = ma2.save(f"switches_photos/lines/lines_{tim}.jpg")
+                print("saving")
 
 
 
 
-        if 0:#i % 100 ==0:
+
+
+        if i % 50 ==0:
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
@@ -370,13 +373,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            helper.save_checkpoint({  # save checkpoint
-                'epoch': epoch,
-                'model': model.module.state_dict(),
-                'best_result': logger.best_result,
-                'optimizer': optimizer.state_dict(),
-                'args': args,
-            }, is_best, epoch, logger.output_directory)
+            # helper.save_checkpoint({  # save checkpoint
+            #     'epoch': epoch,
+            #     'model': model.module.state_dict(),
+            #     'best_result': logger.best_result,
+            #     'optimizer': optimizer.state_dict(),
+            #     'args': args,
+            # }, is_best, epoch, logger.output_directory)
 
     return avg, is_best
 
@@ -407,6 +410,7 @@ def main():
             checkpoint = torch.load(args.resume, map_location=device)
             args.start_epoch = checkpoint['epoch'] + 1
             args.data_folder = args_new.data_folder
+            args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
             print("Completed. Resuming from epoch {}.".format(
                 checkpoint['epoch']))
@@ -468,6 +472,7 @@ def main():
         return
 
     for name, param in model.named_parameters():
+    #for name, param in model.state_dict().items():
         #print(name, param.shape)
         if "parameter" not in name:
         #if 1:
