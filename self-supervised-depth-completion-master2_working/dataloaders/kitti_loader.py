@@ -537,8 +537,6 @@ class KittiDepth(data.Dataset):
         self.sparse_depth_source = args.sparse_depth_source
 
 
-
-
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
@@ -548,7 +546,7 @@ class KittiDepth(data.Dataset):
             self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
-        draw_features(rgb, bins)
+        #draw_features(rgb, bins)
         return rgb, sparse, target, rgb_near
 
     def __getitem__(self, index):
@@ -569,6 +567,7 @@ class KittiDepth(data.Dataset):
                 r_mat = np.eye(3)
 
         rgb_col = rgb
+        #return rgb None if the option in args.input is not rgb
         rgb, gray = handle_gray(rgb, self.args)
         candidates = {"rgb":rgb, "d":sparse, "gt":target, \
             "g":gray, "r_mat":r_mat, "t_vec":t_vec, "rgb_near":rgb_near}
