@@ -7,7 +7,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 
-from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader_curr import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNet
 from metrics import AverageMeter, Result
 import criteria
@@ -108,7 +108,7 @@ parser.add_argument(
     '-m',
     '--train-mode',
     type=str,
-    default="sparse",
+    default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
 #parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')

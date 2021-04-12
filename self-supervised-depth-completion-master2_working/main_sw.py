@@ -185,8 +185,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
 
-        if args.type_feature=="sq":
-            depth_adjustment(gt, False)
+        # if args.type_feature=="sq":
+        #     depth_adjustment(gt, False)
 
         data_time = time.time() - start
 

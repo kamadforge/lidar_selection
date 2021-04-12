@@ -168,6 +168,7 @@ values1  = []
 np.save("value.npy", values1)
 
 def depth_read(filename, depth_mode, type_feature, depth_source):
+
     # loads depth map D from png file
     # and returns it as a numpy array,
     # for details see readme.txt

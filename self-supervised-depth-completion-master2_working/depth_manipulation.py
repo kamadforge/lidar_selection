@@ -73,7 +73,7 @@ def depth_adjustment(depth, adjust, rgb=None):
     elif sq_mode == "most":
         squares = np.array([int(a) for a in A_2d_argsort[-10:]])
     elif sq_mode == "switch":
-        squares = np.load(f"ranks/switches_argsort_2D_iter_507.npy")[-10:]
+        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_490.npy")[-10:]
     print(f"Squares used {sq_mode}: ", squares)
 
     # draw the selected squares
