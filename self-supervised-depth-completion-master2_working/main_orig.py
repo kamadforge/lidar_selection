@@ -78,7 +78,7 @@ parser.add_argument('--data-folder',
 parser.add_argument('-i',
                     '--input',
                     type=str,
-                    default='d', #'gd' greyscale and depth
+                    default='gd', #'gd' greyscale and depth
                     choices=input_options,
                     help='input: | '.join(input_options))
 parser.add_argument('-l',
@@ -115,7 +115,7 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--depth_adjust', default=0, type=int)
+parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 
 args = parser.parse_args()
@@ -123,6 +123,7 @@ args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
 args.result = os.path.join('..', 'results')
 args.use_rgb = ('rgb' in args.input) or args.use_pose
+# args.use_rgb = True
 args.use_d = 'd' in args.input
 args.use_g = 'g' in args.input
 if args.use_pose:
@@ -184,7 +185,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     table_is=np.zeros(400)
     for i, batch_data in enumerate(loader):
 
-
+        print ("i: ", i)
         start = time.time()
         batch_data = {
             key: val.to(device)
@@ -193,16 +194,23 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
 
+
         depth_adjust=args.depth_adjust
-        if depth_adjust:
-            depth_new, table_i = depth_adjustment(batch_data['d'], True)
-            table_is+=table_i
+        adjust_features=False
+        if depth_adjust and args.use_d:
+            if args.use_rgb:
+                depth_new = depth_adjustment(batch_data['d'], adjust_features, batch_data['rgb'])
+            else:
+                depth_new = depth_adjustment(batch_data['d'], adjust_features)
+            #table_is+=table_i
             # many_points = np.where(table_is==i+1)[0]
             # print(many_points)
             # print(len(many_points))
             #print(np.argsort(-table_is)[:30])
             #print(np.sort(-table_is)[:30])
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
+
+
 
         data_time = time.time() - start
 
@@ -288,8 +296,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        every=50
-        if i % every ==0 and mode != "val":
+        every=990
+        if i % every ==0:
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
@@ -298,13 +306,15 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            helper.save_checkpoint({  # save checkpoint
-                'epoch': epoch,
-                'model': model.module.state_dict(),
-                'best_result': logger.best_result,
-                'optimizer': optimizer.state_dict(),
-                'args': args,
-            }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
+            if mode != "val":
+            #if 1:
+                helper.save_checkpoint({  # save checkpoint
+                    'epoch': epoch,
+                    'model': model.module.state_dict(),
+                    'best_result': logger.best_result,
+                    'optimizer': optimizer.state_dict(),
+                    'args': args,
+                }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
 
     return avg, is_best
 
@@ -325,6 +335,9 @@ def main():
             args.val = args_new.val
             args.sparse_depth_source = args_new.sparse_depth_source
             args.depth_adjust = args_new.depth_adjust
+            args.use_rgb = args_new.use_rgb
+            args.use_d = args_new.use_d
+            args.input = args_new.input
             is_eval = True
             print("Completed.")
         else:
@@ -374,8 +387,10 @@ def main():
                                                    sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
     val_dataset = KittiDepth('val', args)
+
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
     val_loader = torch.utils.data.DataLoader(
-        val_dataset,
+        val_dataset_sub,
         batch_size=1,
         shuffle=False,
         num_workers=0,
@@ -411,4 +426,6 @@ def main():
 
 
 if __name__ == '__main__':
+    t=time.time()
     main()
+    print("Total time: ", (t-time.time())/60.)
