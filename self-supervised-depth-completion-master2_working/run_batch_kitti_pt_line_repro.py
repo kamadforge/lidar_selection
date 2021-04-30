@@ -526,6 +526,21 @@ def main(argv):
                             #
                             # #print(im)
 
+                        # TODO do it for several images
+                        if "pixels_to_lines" not in globals():
+                            global pixels_to_lines
+                            pixels_to_lines = np.zeros((65, 352, 1216))
+
+                        for i in range(len(coords_[0])):
+                            hor = int(np.floor(coords_[0][i]))
+                            ver = int(np.floor(coords_[1][i]))
+                            if hor > 0 and ver > 0 and hor < 1216 and ver < 352:
+                                pixels_to_lines[int(line_id[i])][ver][hor] = 1
+                        # plt.imshow(pixels_to_lines[28])
+                        # plt.show()
+                        print(pixels_to_lines.sum(axis=1).sum(axis=1))
+                        np.save("kitti_pixels_to_lines.npy", pixels_to_lines)
+                        print("saved")
 
                         save = True
                         if save:
