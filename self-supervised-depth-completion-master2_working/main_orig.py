@@ -13,9 +13,9 @@ from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
-from depth_manipulation import depth_adjustment
+from features.depth_manipulation import depth_adjustment, depth_adjustment_lines
+from features.depth_draw import draw
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
@@ -122,8 +122,8 @@ args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
 args.result = os.path.join('..', 'results')
-args.use_rgb = ('rgb' in args.input) or args.use_pose
-# args.use_rgb = True
+#args.use_rgb = ('rgb' in args.input) or args.use_pose
+args.use_rgb = True
 args.use_d = 'd' in args.input
 args.use_g = 'g' in args.input
 if args.use_pose:
@@ -198,10 +198,17 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         depth_adjust=args.depth_adjust
         adjust_features=False
         if depth_adjust and args.use_d:
-            if args.use_rgb:
-                depth_new = depth_adjustment(batch_data['d'], adjust_features, batch_data['rgb'])
-            else:
-                depth_new = depth_adjustment(batch_data['d'], adjust_features)
+            if args.type_feature == "sq":
+                if args.use_rgb:
+                    depth_new = depth_adjustment(batch_data['d'], adjust_features, i, batch_data['rgb'])
+                else:
+                    depth_new = depth_adjustment(batch_data['d'], adjust_features, i)
+            elif args.type_feature == "lines":
+                depth_new = depth_adjustment_lines(batch_data['d'])
+
+
+
+
             #table_is+=table_i
             # many_points = np.where(table_is==i+1)[0]
             # print(many_points)
@@ -295,6 +302,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_save_img_comparison(mode, i, batch_data, pred,
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
+
+
 
         every=990
         if i % every ==0:

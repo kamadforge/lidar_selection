@@ -1,3 +1,5 @@
+# draws squares over an image
+
 from PIL import Image, ImageDraw
 import numpy as np
 import time
@@ -6,7 +8,7 @@ import time
 
 #S_numpy.shape[1]
 
-def draw(type_feature, rgb, switches_2d_argsort, shape_1):
+def draw(type_feature, rgb, switches_2d_argsort, shape_1, iter=None):
 
     print("Drawing")
     hor = switches_2d_argsort % shape_1
@@ -37,7 +39,10 @@ def draw(type_feature, rgb, switches_2d_argsort, shape_1):
             img1.rectangle(shape, outline="red")
 
         tim = time.time()
-        lala = ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
+        if iter is not None:
+            ma2.save(f"switches_photos/squares/squares_it_{iter}.jpg")
+        else:
+            ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
         print("saving")
     elif type_feature == "lines":
         print_square_num = 20

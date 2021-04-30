@@ -1,3 +1,7 @@
+#--data-folder /home/kamil/Dropbox/Current_research/data/kitti --resume /home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar
+
+
+#--data-folder /home/kamil/Dropbox/Current_research/data/kitti --resume /home/kamil/Dropbox/Current_research/depth_completion_opt/results/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-26@14-59/checkpoint_qnet-0_i_1200_typefeature_sq.pth.tar
 import argparse
 import os
 import time
@@ -11,12 +15,11 @@ from PIL import Image, ImageDraw
 
 
 from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNet, DepthCompletionNetQ, DepthCompletionNetQSquare
+from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet
 from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
-from depth_manipulation import depth_adjustment
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -118,6 +121,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
+parser.add_argument('--instancewise', default=1)
 
 
 args = parser.parse_args()
@@ -176,6 +180,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     torch.set_printoptions(profile="full")
     for i, batch_data in enumerate(loader):
 
+        print("i: ", i)
         # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()
         batch_data = {
@@ -191,7 +196,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         data_time = time.time() - start
 
         start = time.time()
-        pred = model(batch_data)
+        if mode == "train":
+            pred = model(batch_data)
+        else:
+            with torch.no_grad():
+                pred = model(batch_data)
 
         vis=False
         if vis:
@@ -260,17 +269,29 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
 
-        if i % 10 == 0:
+        if (i % 1 == 0 and args.evaluate and args.instancewise) or (i % 50 and not args.evaluate and not args.instancewise):
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             #print("*************swiches:")
             torch.set_printoptions(precision=6, sci_mode=False)
-            mmp = 1000 * model.module.parameter
+            mmp = 1000 * model.module.phi
             phi = F.softplus(mmp)
+
             S = phi / torch.sum(phi)
-            #print(S, '*********')
-            S_numpy= S.detach().cpu()
+            print("S", S[1, -10:])
+            S_numpy= S.detach().cpu().numpy()
+
+            global Ss
+            if "Ss" not in globals():
+                Ss = []
+                Ss.append(S_numpy)
+            else:
+                Ss.append(S_numpy)
+
+
+
+
             switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
             switches_2d_sort = np.sort(S_numpy, None)
             print("Switches: ")
@@ -293,6 +314,17 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 #     print(torch.argsort(S))
                 np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
                 np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
+
+            elif args.type_feature == "lines":
+                np.save(f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy", switches_2d_argsort)
+                np.save(f"ranks/switches_2D_equal_lines_iter_{i}.npy", S_numpy)
+                if "last_argsort" in locals():
+                    os.remove(last_argsort)
+                    os.remove(last_switches)
+                last_argsort = f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy"
+                last_switches =  f"ranks/switches_2D_equal_lines_iter_{i}.npy"
+
+
 
         # measure accuracy and record loss
         with torch.no_grad():
@@ -363,8 +395,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
 
-
-        if i % 50 ==0:
+        every = 50
+        if i % every ==0:
 
             print("saving")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
@@ -373,13 +405,18 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            # helper.save_checkpoint({  # save checkpoint
-            #     'epoch': epoch,
-            #     'model': model.module.state_dict(),
-            #     'best_result': logger.best_result,
-            #     'optimizer': optimizer.state_dict(),
-            #     'args': args,
-            # }, is_best, epoch, logger.output_directory)
+            if mode != "val":
+                helper.save_checkpoint({  # save checkpoint
+                    'epoch': epoch,
+                    'model': model.module.state_dict(),
+                    'best_result': logger.best_result,
+                    'optimizer': optimizer.state_dict(),
+                    'args': args,
+                }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
+
+    if args.evaluate:
+        Ss_numpy = np.array(Ss)
+        np.save("ranks/instance/Ss_val.npy", Ss)
 
     return avg, is_best
 
@@ -397,6 +434,7 @@ def main():
             args = checkpoint['args']
             args.data_folder = args_new.data_folder
             args.val = args_new.val
+            args.evaluate = args_new.evaluate
             is_eval = True
             print("Completed.")
         else:
@@ -422,7 +460,8 @@ def main():
 
 
     if args.type_feature == "sq":
-        model = DepthCompletionNetQSquare(args).to(device)
+        if args.instancewise:
+            model = DepthCompletionNetQSquareNet(args).to(device)
     elif args.type_feature == "lines":
         model = DepthCompletionNetQ(args).to(device)
     model_named_params = [

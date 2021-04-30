@@ -2,16 +2,18 @@
 
 
 import numpy as np
+import os
 
 from scipy.stats import binned_statistic_2d
 
-from depth_draw import draw
+from features.depth_draw import draw
+from features.show_lines import save_pic
 
 # print("bins shape", bins_2d_depth.statistic.shape)
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, adjust, rgb=None):
+def depth_adjustment(depth, adjust, iter, rgb=None):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
 
@@ -66,19 +68,39 @@ def depth_adjustment(depth, adjust, rgb=None):
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "switch"
+    sq_mode = "switch_local"
     if sq_mode == "random":
-        np.random.seed(15)
+        np.random.seed(16)
         squares = np.random.choice(square_num, 10)
     elif sq_mode == "most":
         squares = np.array([int(a) for a in A_2d_argsort[-10:]])
     elif sq_mode == "switch":
-        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_490.npy")[-10:]
+        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")[-10:]
+    elif sq_mode =="switch_local":
+        if not os.path.isfile("ranks/instance/Ss_val_argsort.npy"):
+            sq = np.load("ranks/instance/Ss_val.npy")
+            sq_argsort_local=[]
+            for i in range(sq.shape[0]):
+                sq_argsort_local.append(np.argsort(sq[i], None))
+            sq_argsort_local = np.array(sq_argsort_local)
+            np.save("ranks/instance/Ss_val_argsort.npy", sq_argsort_local)
+        squares_local = np.load("ranks/instance/Ss_val_argsort.npy")
+        squares = squares_local[iter, -10:]
+
+
+
     print(f"Squares used {sq_mode}: ", squares)
 
     # draw the selected squares
-    if rgb != None and 0:
-        draw("sq", rgb, squares, A.shape[1])
+    if "ii" not in globals():
+        global ii
+        ii=0
+    else:
+        ii+=1
+
+
+    if rgb != None and 1 and (ii % 10)==0:
+        draw("sq", rgb, squares, A.shape[1], ii)
 
     ver = np.floor(squares // A.shape[1])
     hor = squares % A.shape[1]
@@ -90,6 +112,8 @@ def depth_adjustment(depth, adjust, rgb=None):
             mask_new[verp_scaled:(verp_scaled+size_of_bin), horp_scaled:(horp_scaled+size_of_bin)]=1
 
         depth=mask_new*depth
+
+        save_pic(mask_new, "sq_"+sq_mode)
 
 
     remove_depth=0
@@ -171,29 +195,36 @@ def depth_adjustment(depth, adjust, rgb=None):
 
 
 def depth_adjustment_lines(depth):
-    # line adjustment
-    # create line_ids vecotor with the same number of points for each line,
-    # sample if too many, remove all if too few
-    # it has line number if selected and -1 if not
-    sel_line_id = np.ones(coords_new.shape[0]) * (-1)
-    for p in range(lines_num):
-        line_id_inds = np.where(line_id_new == p)[0]
-        pts_sel = 100
-        if len(line_id_inds) > pts_sel:
-            line_id_inds_rand = np.random.choice(line_id_inds, pts_sel, replace=False)
-            sel_line_id[line_id_inds_rand] = p
-    print(f"pts depth: {len(np.where(sel_line_id > -1)[0])}")
 
-    # copying points from (num_pts,2) shape to the (y_im, x_im, depth)
-    # for both squares and lines
-    depth_binary = np.zeros_like(depth)
-    for i in range(coords_new.shape[0]):
-        # selects from all depth points, so that we have the same num for each line
-        if type_feature == "sq" or type_feature == "None" or (sel_line_id[i] > -1 and type_feature == "lines"):
-            hor = int(np.floor(coords_new[i][0]))
-            hor = int(np.floor(coords_new[i][0]))
-            ver = int(np.floor(coords_new[i][1]))
-            depth_binary[ver, hor] = pt_dep[i]
-    depth = depth_binary
-    depth_points = np.where(depth > 0)
+    depth = depth.detach().cpu().numpy().squeeze()
+    masks = np.load("kitti_pixels_to_lines_masks.npy")
 
+    # choose ranks for the squares
+    select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
+    lines_num = 65
+    lines = np.arange(lines_num)
+    lines_mode = "switch"
+    if lines_mode == "random":
+        np.random.seed(15)
+        lines = np.random.choice(lines_num, 10)
+    elif lines_mode == "most":
+        lines_pts = masks.sum(axis=1).sum(axis=1)
+        lines_pts= lines_pts[:-1]
+        lines_ptsargsort = np.argsort(lines_pts)
+        lines = lines_ptsargsort[-10:]
+    elif lines_mode == "switch":
+        lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1230.npy")
+        lines = lines[ lines != 0]
+        lines = lines[-10:]
+    print(f"Lines used {lines_mode}: ", lines)
+
+    if select_mask:
+        mask_new = np.zeros_like(depth)
+        for p, item in enumerate(lines):
+            mask_new = mask_new+masks[item]
+
+        depth=mask_new*depth
+
+        save_pic(mask_new, lines_mode)
+
+    return depth
