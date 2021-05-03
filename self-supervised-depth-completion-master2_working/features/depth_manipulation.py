@@ -4,6 +4,7 @@
 import numpy as np
 import os
 
+
 from scipy.stats import binned_statistic_2d
 
 from features.depth_draw import draw
@@ -13,11 +14,12 @@ from features.show_lines import save_pic
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, adjust, iter, rgb=None):
+def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
 
     depth = depth.detach().cpu().numpy().squeeze()
+
     depth_points = np.where(depth > 0)
 
     # binning
@@ -32,8 +34,7 @@ def depth_adjustment(depth, adjust, iter, rgb=None):
     square_num = (len(bin_ver)-1)*(len(bin_hor)-1)
 
     # bin function
-    bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count',
-                                        bins=[bin_ver, bin_hor], range=[[0, owidth], [0, oheight]])
+    bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range=[[0, owidth], [0, oheight]])
     # hash bin function each bin number has a list of points that belong to that bin
     bin_hash = {}
     for b in range(square_num):
@@ -68,23 +69,24 @@ def depth_adjustment(depth, adjust, iter, rgb=None):
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "switch_local"
+    sq_mode = "random"
     if sq_mode == "random":
-        np.random.seed(16)
+        #np.random.seed(16)
         squares = np.random.choice(square_num, 10)
     elif sq_mode == "most":
         squares = np.array([int(a) for a in A_2d_argsort[-10:]])
     elif sq_mode == "switch":
         squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")[-10:]
     elif sq_mode =="switch_local":
-        if not os.path.isfile("ranks/instance/Ss_val_argsort.npy"):
-            sq = np.load("ranks/instance/Ss_val.npy")
+        name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
+        if not os.path.isfile(f"ranks/instance/Ss_val_argsort_{name}.npy"):
+            sq = np.load(f"ranks/instance/Ss_val_{name}.npy")
             sq_argsort_local=[]
             for i in range(sq.shape[0]):
                 sq_argsort_local.append(np.argsort(sq[i], None))
             sq_argsort_local = np.array(sq_argsort_local)
-            np.save("ranks/instance/Ss_val_argsort.npy", sq_argsort_local)
-        squares_local = np.load("ranks/instance/Ss_val_argsort.npy")
+            np.save(f"ranks/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
+        squares_local = np.load(f"ranks/instance/Ss_val_argsort_{name}.npy")
         squares = squares_local[iter, -10:]
 
 
@@ -92,15 +94,15 @@ def depth_adjustment(depth, adjust, iter, rgb=None):
     print(f"Squares used {sq_mode}: ", squares)
 
     # draw the selected squares
-    if "ii" not in globals():
-        global ii
-        ii=0
-    else:
-        ii+=1
+    # if "ii" not in globals():
+    #     global ii
+    #     ii=0
+    # else:
+    #     ii+=1
 
 
-    if rgb != None and 1 and (ii % 10)==0:
-        draw("sq", rgb, squares, A.shape[1], ii)
+    if rgb != None and 1 and (iter % 1)==0:
+        draw("sq", rgb, depth, squares, A.shape[1], str(iter)+"_"+str(sub_iter))
 
     ver = np.floor(squares // A.shape[1])
     hor = squares % A.shape[1]
