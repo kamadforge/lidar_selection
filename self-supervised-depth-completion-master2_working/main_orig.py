@@ -111,11 +111,11 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+#parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--depth_adjust', default=1, type=int)
+parser.add_argument('--depth_adjust', default=0, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 
 args = parser.parse_args()
@@ -166,6 +166,121 @@ if args.use_pose:
         kitti_intrinsics = kitti_intrinsics.cuda()
 
 
+def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
+    block_average_meter = AverageMeter()
+    average_meter = AverageMeter()
+    meters = [block_average_meter, average_meter]
+
+    # switch to appropriate mode
+    assert mode in ["val", "eval", "test_prediction", "test_completion"], \
+        "unsupported mode: {}".format(mode)
+
+    model.eval()
+    lr = 0
+
+    torch.set_printoptions(profile="full")
+    for i, batch_data in enumerate(loader):
+
+        print ("i: ", i)
+        start = time.time()
+        batch_data = {
+            key: val.to(device)
+            for key, val in batch_data.items() if val is not None
+        }
+        gt = batch_data[
+            'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+
+        original_depth = batch_data['d'].data
+        # a test to run the photo several times on different subsets of features
+
+        if i in [83, 260, 324, 413, 150, 295, 303, 310, 466]:
+            it_nums = 500
+        else:
+            it_nums = 1
+
+        it_nums = 1
+        best = 10000000000000000
+        worst = 0
+        for it_random_test in range(it_nums):
+            #print("it_random_test: ", it_random_test)
+
+            batch_data['d'] = original_depth.data
+
+
+            # adjust depth
+            depth_adjust=args.depth_adjust
+            adjust_features=False
+            if depth_adjust and args.use_d:
+                if args.type_feature == "sq":
+                    if args.use_rgb:
+                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, it_random_test, batch_data['rgb'])
+                    else:
+                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, it_random_test)
+                elif args.type_feature == "lines":
+                    depth_new = depth_adjustment_lines(batch_data['d'])
+
+
+                batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
+            data_time = time.time() - start
+            start = time.time()
+            if mode=="train":
+                pred = model(batch_data)
+            else:
+                with torch.no_grad():
+                    pred = model(batch_data)
+            # im = batch_data['d'].detach().cpu().numpy()
+            # im_sq = im.squeeze()
+            # plt.figure()
+            # plt.imshow(im_sq)
+            # plt.show()
+            # for i in range(im_sq.shape[0]):
+            #     print(f"{i} - {np.sum(im_sq[i])}")
+
+
+            # computing mse error only
+            output = pred.data
+            target = gt.data
+            valid_mask = target > 0.1
+            print("output", output.sum())
+            # convert from meters to mm
+            output_mm = 1e3 * output[valid_mask]
+            target_mm = 1e3 * target[valid_mask]
+            abs_diff = (output_mm - target_mm).abs()
+            print("output_mm_1", output_mm.sum())
+            mse = float((torch.pow(abs_diff, 2)).mean())
+            print("mse::", mse)
+            if mse>worst:
+                worst = mse; worst_id = (i, it_random_test)
+            if mse<best:
+                best = mse; best_id = (i, it_random_test)
+
+        print(f"Best: {best_id}, {best}")
+        print(f"Worse: {worst_id}, {worst}")
+
+
+
+        every=990 if mode == "val" else 200
+        if i % every ==0:
+
+            print("saving")
+            avg = logger.conditional_save_info(mode, average_meter, epoch)
+            is_best = logger.rank_conditional_save_best(mode, avg, epoch)
+            if is_best and not (mode == "train"):
+                logger.save_img_comparison_as_best(mode, epoch)
+            logger.conditional_summarize(mode, avg, is_best)
+
+            if mode != "val":
+            #if 1:
+                helper.save_checkpoint({  # save checkpoint
+                    'epoch': epoch,
+                    'model': model.module.state_dict(),
+                    'best_result': logger.best_result,
+                    'optimizer': optimizer.state_dict(),
+                    'args': args,
+                }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
+
+    return avg, is_best
+
 def iterate(mode, args, loader, model, optimizer, logger, epoch):
     block_average_meter = AverageMeter()
     average_meter = AverageMeter()
@@ -195,6 +310,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
 
 
+        # adjust depth
         depth_adjust=args.depth_adjust
         adjust_features=False
         if depth_adjust and args.use_d:
@@ -209,18 +325,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
 
-            #table_is+=table_i
-            # many_points = np.where(table_is==i+1)[0]
-            # print(many_points)
-            # print(len(many_points))
-            #print(np.argsort(-table_is)[:30])
-            #print(np.sort(-table_is)[:30])
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
-
-
-
         data_time = time.time() - start
-
         start = time.time()
         if mode=="train":
             pred = model(batch_data)
@@ -234,6 +340,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # plt.show()
         # for i in range(im_sq.shape[0]):
         #     print(f"{i} - {np.sum(im_sq[i])}")
+
 
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
         if mode == 'train':
@@ -297,6 +404,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 m.update(result, gpu_time, data_time, mini_batch_size)
                 for m in meters
             ]
+            print(f"mse: {result.mse:,}")
+            if result.mse > 150000000:
+                print("bad mse")
             logger.conditional_print(mode, i, epoch, lr, len(loader),
                                      block_average_meter, average_meter)
             logger.conditional_save_img_comparison(mode, i, batch_data, pred,
@@ -305,7 +415,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
 
-        every=990
+        every=990 if mode == "val" else 200
         if i % every ==0:
 
             print("saving")
