@@ -8,7 +8,7 @@ import time
 
 #S_numpy.shape[1]
 
-def draw(type_feature, rgb, switches_2d_argsort, shape_1, iter=None):
+def draw(type_feature, rgb, depth, switches_2d_argsort, shape_1, iter=None):
 
     print("Drawing")
     hor = switches_2d_argsort % shape_1
@@ -17,10 +17,15 @@ def draw(type_feature, rgb, switches_2d_argsort, shape_1, iter=None):
     # print("and")
     # print(ver[-10:], hor[-10:])
 
+    # depth back
+    depth = depth.squeeze()
+    depth_unnor = depth * 256
+    #ma2 = Image.fromarray(depth_unnor).convert("RGB")
+
+
     ma = rgb.detach().cpu().numpy().squeeze()
     ma = np.transpose(ma, axes=[1, 2, 0])
     # ma = np.uint8(ma)
-    # ma2 = Image.fromarray(ma)
     ma2 = Image.fromarray(np.uint8(ma)).convert('RGB')
     # create rectangle image
     img1 = ImageDraw.Draw(ma2)
