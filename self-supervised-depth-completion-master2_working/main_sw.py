@@ -290,39 +290,39 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 Ss.append(S_numpy)
 
 
+            if (i % 50 and not args.evaluate and not args.instancewise):
 
-
-            switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
-            switches_2d_sort = np.sort(S_numpy, None)
-            print("Switches: ")
-            print(switches_2d_argsort[:10])
-            print(switches_2d_sort[:10])
-            print("and")
-            print(switches_2d_argsort[-10:])
-            print(switches_2d_sort[-10:])
-
-            if args.type_feature == "sq":
-
-                hor = switches_2d_argsort % S_numpy.shape[1]
-                ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
-                print(ver[:10],hor[:10])
+                switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
+                switches_2d_sort = np.sort(S_numpy, None)
+                print("Switches: ")
+                print(switches_2d_argsort[:10])
+                print(switches_2d_sort[:10])
                 print("and")
-                print(ver[-10:], hor[-10:])
-                # if type_feature == "sq":
-                #     print(switches_2d_argsort)
-                # elif type_feature == "lines":
-                #     print(torch.argsort(S))
-                np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
-                np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
+                print(switches_2d_argsort[-10:])
+                print(switches_2d_sort[-10:])
 
-            elif args.type_feature == "lines":
-                np.save(f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy", switches_2d_argsort)
-                np.save(f"ranks/switches_2D_equal_lines_iter_{i}.npy", S_numpy)
-                if "last_argsort" in locals():
-                    os.remove(last_argsort)
-                    os.remove(last_switches)
-                last_argsort = f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy"
-                last_switches =  f"ranks/switches_2D_equal_lines_iter_{i}.npy"
+                if args.type_feature == "sq":
+
+                    hor = switches_2d_argsort % S_numpy.shape[1]
+                    ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
+                    print(ver[:10],hor[:10])
+                    print("and")
+                    print(ver[-10:], hor[-10:])
+                    # if type_feature == "sq":
+                    #     print(switches_2d_argsort)
+                    # elif type_feature == "lines":
+                    #     print(torch.argsort(S))
+                    np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
+                    np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
+
+                elif args.type_feature == "lines":
+                    np.save(f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy", switches_2d_argsort)
+                    np.save(f"ranks/switches_2D_equal_lines_iter_{i}.npy", S_numpy)
+                    if "last_argsort" in locals():
+                        os.remove(last_argsort)
+                        os.remove(last_switches)
+                    last_argsort = f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy"
+                    last_switches =  f"ranks/switches_2D_equal_lines_iter_{i}.npy"
 
 
 
@@ -415,8 +415,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
 
     if args.evaluate:
+        filename = os.path.split(args.evaluate)[1]
         Ss_numpy = np.array(Ss)
-        np.save("ranks/instance/Ss_val.npy", Ss)
+        np.save(f"ranks/instance/Ss_val_{filename}.npy", Ss)
 
     return avg, is_best
 
