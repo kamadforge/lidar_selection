@@ -269,28 +269,32 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
 
-        if (i % 1 == 0 and args.evaluate and args.instancewise) or (i % 50 and not args.evaluate and not args.instancewise):
+        if (i % 1 == 0 and args.evaluate and args.instancewise) or (i % 5 == 0 and not args.evaluate and not args.instancewise):
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             #print("*************swiches:")
             torch.set_printoptions(precision=6, sci_mode=False)
-            mmp = 1000 * model.module.phi
-            phi = F.softplus(mmp)
 
-            S = phi / torch.sum(phi)
-            print("S", S[1, -10:])
-            S_numpy= S.detach().cpu().numpy()
+            if model.module.phi is not None:
+                mmp = 1000 * model.module.phi
+                phi = F.softplus(mmp)
 
-            global Ss
-            if "Ss" not in globals():
-                Ss = []
-                Ss.append(S_numpy)
-            else:
-                Ss.append(S_numpy)
+                S = phi / torch.sum(phi)
+                print("S", S[1, -10:])
+                S_numpy= S.detach().cpu().numpy()
+
+            if args.instancewise:
+
+                global Ss
+                if "Ss" not in globals():
+                    Ss = []
+                    Ss.append(S_numpy)
+                else:
+                    Ss.append(S_numpy)
 
 
-            if (i % 50 and not args.evaluate and not args.instancewise):
+            if (i % 5 ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
 
                 switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
                 switches_2d_sort = np.sort(S_numpy, None)
@@ -463,6 +467,8 @@ def main():
     if args.type_feature == "sq":
         if args.instancewise:
             model = DepthCompletionNetQSquareNet(args).to(device)
+        else:
+            model = DepthCompletionNetQSquare(args).to(device)
     elif args.type_feature == "lines":
         model = DepthCompletionNetQ(args).to(device)
     model_named_params = [
