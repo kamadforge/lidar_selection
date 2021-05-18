@@ -14,7 +14,8 @@ import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
 
-from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
+#from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader_curr import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet
 from metrics import AverageMeter, Result
 import criteria
@@ -463,7 +464,7 @@ def main():
 
     print("=> creating model and optimizer ... ", end='')
 
-
+    # model
     if args.type_feature == "sq":
         if args.instancewise:
             model = DepthCompletionNetQSquareNet(args).to(device)
@@ -482,7 +483,6 @@ def main():
         model.load_state_dict(checkpoint['model'], strict=False)
         #optimizer.load_state_dict(checkpoint['optimizer'])
         print("=> checkpoint state loaded.")
-
     model = torch.nn.DataParallel(model)
 
     # Data loading code
