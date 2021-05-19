@@ -538,7 +538,7 @@ def main():
             'best_result': logger.best_result,
             'optimizer' : optimizer.state_dict(),
             'args' : args,
-        }, is_best, epoch, logger.output_directory)
+        }, is_best, epoch, logger.output_directory, args.type_feature)
 
 
 if __name__ == '__main__':
