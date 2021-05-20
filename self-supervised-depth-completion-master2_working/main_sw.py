@@ -56,13 +56,13 @@ parser.add_argument('-b',
                     help='mini-batch size (default: 1)')
 parser.add_argument('--lr',
                     '--learning-rate',
-                    default=1e-5,
+                    default=1e-4, #1e-5
                     type=float,
                     metavar='LR',
                     help='initial learning rate (default 1e-5)')
 parser.add_argument('--weight-decay',
                     '--wd',
-                    default=0,
+                    default=0.1, #
                     type=float,
                     metavar='W',
                     help='weight decay (default: 0)')
@@ -181,6 +181,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     torch.set_printoptions(profile="full")
     for i, batch_data in enumerate(loader):
 
+        name = batch_data['name'][0]
+        print(name)
+        del batch_data['name']
         print("i: ", i)
         # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()

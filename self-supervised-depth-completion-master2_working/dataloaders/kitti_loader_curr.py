@@ -548,10 +548,10 @@ class KittiDepth(data.Dataset):
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
         #draw_features(rgb, bins)
-        return rgb, sparse, target, rgb_near
+        return rgb, sparse, target, rgb_near, os.path.split(self.paths['d'][index])[1]
 
     def __getitem__(self, index):
-        rgb, sparse, target, rgb_near = self.__getraw__(index)
+        rgb, sparse, target, rgb_near, name = self.__getraw__(index)
         rgb, sparse, target, rgb_near = self.transform(rgb, sparse, target,
                                                        rgb_near, self.args)
         r_mat, t_vec = None, None
@@ -576,7 +576,7 @@ class KittiDepth(data.Dataset):
             key: to_float_tensor(val)
             for key, val in candidates.items() if val is not None
         }
-
+        items["name"]=name
         return items
 
     def __len__(self):

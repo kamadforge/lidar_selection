@@ -622,6 +622,7 @@ class DepthCompletionNetQSquare(nn.Module):
         num = 65
         #self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
         self.parameter = Parameter(-1e-10 * torch.ones(len(self.bin_ver)-1 , len(self.bin_hor)-1))
+        self.phi=None
         #self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
 
         if 'd' in self.modality:
@@ -711,15 +712,15 @@ class DepthCompletionNetQSquare(nn.Module):
 
         pre_phi = self.parameter
         # print(self.parameter)
-        phi = F.softplus(self.parameter)
+        self.phi = F.softplus(self.parameter)
 
         #if any(torch.isnan(phi)):
-        if any(torch.flatten(torch.isnan(phi))):
+        if any(torch.flatten(torch.isnan(self.phi))):
             print("some Phis are NaN")
         # it looks like too large values are making softplus-transformed values very large and returns NaN.
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
-        S = phi / torch.sum(phi)
+        S = self.phi / torch.sum(self.phi)
         #print("S from model", S)
         #print("parameter from model", self.parameter)
 

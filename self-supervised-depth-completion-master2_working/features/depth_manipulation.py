@@ -69,7 +69,8 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "random"
+    sq_mode = "switch_local"
+    print(sq_mode)
     if sq_mode == "random":
         #np.random.seed(16)
         squares = np.random.choice(square_num, 10)
@@ -77,8 +78,10 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
         squares = np.array([int(a) for a in A_2d_argsort[-10:]])
     elif sq_mode == "switch":
         squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")[-10:]
+        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_205.npy")[-10:]
     elif sq_mode =="switch_local":
-        name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
+        #name = "checkpoint_qnet-0_i_1100_typefeature_sq.pth.tar"
+        name = "checkpoint_qnet-0_i_1100_typefeature_sq.pth.tar"
         if not os.path.isfile(f"ranks/instance/Ss_val_argsort_{name}.npy"):
             sq = np.load(f"ranks/instance/Ss_val_{name}.npy")
             sq_argsort_local=[]

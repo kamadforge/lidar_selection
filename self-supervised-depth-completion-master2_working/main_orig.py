@@ -1,3 +1,5 @@
+#--data-folder /home/kamil/Dropbox/Current_research/data/kitti -e /home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar
+
 import argparse
 import os
 import time
@@ -17,6 +19,8 @@ from features.depth_manipulation import depth_adjustment, depth_adjustment_lines
 from features.depth_draw import draw
 
 import numpy as np
+
+# ARGUMENTS
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
@@ -49,7 +53,7 @@ parser.add_argument('-b',
                     help='mini-batch size (default: 1)')
 parser.add_argument('--lr',
                     '--learning-rate',
-                    default=1e-5,
+                    default=1e-5, #1e-5
                     type=float,
                     metavar='LR',
                     help='initial learning rate (default 1e-5)')
@@ -111,11 +115,14 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-#parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+
+# parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
+
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--depth_adjust', default=0, type=int)
+parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 
 args = parser.parse_args()
@@ -140,6 +147,9 @@ if args.depth_adjust:
 else:
     print("vanilla full depth")
 print(f"\noutput (only for training): {args.train_mode}\n")
+
+
+# SET-UP
 
 cuda = torch.cuda.is_available() and not args.cpu
 if cuda:
@@ -185,7 +195,7 @@ def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
         start = time.time()
         batch_data = {
             key: val.to(device)
-            for key, val in batch_data.items() if val is not None
+            for key, val in batch_data.items() if val is not None and type(val) != str
         }
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
@@ -193,16 +203,16 @@ def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
         original_depth = batch_data['d'].data
         # a test to run the photo several times on different subsets of features
 
-        if i in [83, 260, 324, 413, 150, 295, 303, 310, 466]:
+        #if i in [83, 260, 324, 413, 150, 295, 303, 310, 466]:
+        if i in [413, 466]:
             it_nums = 500
         else:
-            it_nums = 1
+            it_nums = 0
 
-        it_nums = 1
         best = 10000000000000000
         worst = 0
         for it_random_test in range(it_nums):
-            #print("it_random_test: ", it_random_test)
+            print("it_random_test: ", it_random_test)
 
             batch_data['d'] = original_depth.data
 
@@ -213,9 +223,9 @@ def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
             if depth_adjust and args.use_d:
                 if args.type_feature == "sq":
                     if args.use_rgb:
-                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, it_random_test, batch_data['rgb'])
+                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, batch_data['rgb'],it_random_test, )
                     else:
-                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, it_random_test)
+                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, None, it_random_test)
                 elif args.type_feature == "lines":
                     depth_new = depth_adjustment_lines(batch_data['d'])
 
@@ -254,30 +264,31 @@ def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
             if mse<best:
                 best = mse; best_id = (i, it_random_test)
 
-        print(f"Best: {best_id}, {best}")
-        print(f"Worse: {worst_id}, {worst}")
+        if worst !=0 :
+            print(f"Best: {best_id}, {best}")
+            print(f"Worse: {worst_id}, {worst}")
 
 
 
-        every=990 if mode == "val" else 200
-        if i % every ==0:
-
-            print("saving")
-            avg = logger.conditional_save_info(mode, average_meter, epoch)
-            is_best = logger.rank_conditional_save_best(mode, avg, epoch)
-            if is_best and not (mode == "train"):
-                logger.save_img_comparison_as_best(mode, epoch)
-            logger.conditional_summarize(mode, avg, is_best)
-
-            if mode != "val":
-            #if 1:
-                helper.save_checkpoint({  # save checkpoint
-                    'epoch': epoch,
-                    'model': model.module.state_dict(),
-                    'best_result': logger.best_result,
-                    'optimizer': optimizer.state_dict(),
-                    'args': args,
-                }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
+        # every=990 if mode == "val" else 200
+        # if i % every ==0:
+        #
+        #     print("saving")
+        #     avg = logger.conditional_save_info(mode, average_meter, epoch)
+        #     is_best = logger.rank_conditional_save_best(mode, avg, epoch)
+        #     if is_best and not (mode == "train"):
+        #         logger.save_img_comparison_as_best(mode, epoch)
+        #     logger.conditional_summarize(mode, avg, is_best)
+        #
+        #     if mode != "val":
+        #     #if 1:
+        #         helper.save_checkpoint({  # save checkpoint
+        #             'epoch': epoch,
+        #             'model': model.module.state_dict(),
+        #             'best_result': logger.best_result,
+        #             'optimizer': optimizer.state_dict(),
+        #             'args': args,
+        #         }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
 
     return avg, is_best
 
@@ -285,7 +296,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     block_average_meter = AverageMeter()
     average_meter = AverageMeter()
     meters = [block_average_meter, average_meter]
-
     # switch to appropriate mode
     assert mode in ["train", "val", "eval", "test_prediction", "test_completion"], \
         "unsupported mode: {}".format(mode)
@@ -295,11 +305,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     else:
         model.eval()
         lr = 0
-
     torch.set_printoptions(profile="full")
     table_is=np.zeros(400)
+
+    # ITERATE OVER IMAGES
+
     for i, batch_data in enumerate(loader):
 
+        name = batch_data['name'][0]
+        print(name)
+        del batch_data['name']
         print ("i: ", i)
         start = time.time()
         batch_data = {
@@ -308,7 +323,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         }
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
-
 
         # adjust depth
         depth_adjust=args.depth_adjust
@@ -322,9 +336,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             elif args.type_feature == "lines":
                 depth_new = depth_adjustment_lines(batch_data['d'])
 
-
-
-
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
         data_time = time.time() - start
         start = time.time()
@@ -333,6 +344,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         else:
             with torch.no_grad():
                 pred = model(batch_data)
+                torch.save(pred, f"depth_predicted/{name[:-4]}.t")
         # im = batch_data['d'].detach().cpu().numpy()
         # im_sq = im.squeeze()
         # plt.figure()
@@ -404,9 +416,12 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 m.update(result, gpu_time, data_time, mini_batch_size)
                 for m in meters
             ]
-            print(f"mse: {result.mse:,}")
-            if result.mse > 150000000:
-                print("bad mse")
+            print(f"rmse: {int(result.rmse)}")
+            if result.rmse > 12500:
+                print("bad rmse")
+            elif result.rmse < 4000:
+                print("good")
+
             logger.conditional_print(mode, i, epoch, lr, len(loader),
                                      block_average_meter, average_meter)
             logger.conditional_save_img_comparison(mode, i, batch_data, pred,
@@ -494,7 +509,8 @@ def main():
 
     model = torch.nn.DataParallel(model)
 
-    # Data loading code
+    # DATA
+
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
@@ -527,7 +543,8 @@ def main():
         result, is_best = iterate("val", args, val_loader, model, None, logger, checkpoint['epoch'])
         return
 
-    # main loop
+    # MAIN LOOP
+
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print("=> starting training epoch {} ..".format(epoch))
