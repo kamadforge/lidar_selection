@@ -62,7 +62,7 @@ parser.add_argument('--lr',
                     help='initial learning rate (default 1e-5)')
 parser.add_argument('--weight-decay',
                     '--wd',
-                    default=0.1, #
+                    default=0.01, #
                     type=float,
                     metavar='W',
                     help='weight decay (default: 0)')
@@ -162,6 +162,32 @@ if args.use_pose:
     if cuda:
         kitti_intrinsics = kitti_intrinsics.cuda()
 
+def zero_params(model):
+    it = 0
+    for name, param in model.state_dict().items():
+        #print(name, param.shape)
+        if "module.c" in name and "weight" in name and "qfit" not in name:
+        #     it += 1
+            param.grad=torch.zeros_like(param)
+        #     # print(param.data)
+        if "module.c" in name and "bias" in name and "qfit" not in name:
+            param.grad=torch.zeros_like(param)
+        if "bn" in name and "qfit" not in name:
+            param.grad=torch.zeros_like(param)
+        if "running_mean" in name and "qfit" not in name:
+            param.grad=torch.zeros_like(param)
+        if "running_var" in name and "qfit" not in name:
+            param.grad=torch.zeros_like(param)
+        #     # print(param.data)
+        # if ("bn" in name) and ("weight" in name):
+        #     param.data[combinationss[it - 1]] = 0
+        # if ("bn" in name) and ("bias" in name):
+        #     param.data[combinationss[it - 1]] = 0
+        # if ("bn" in name) and ("running_mean" in name):
+        #     param.data[combinationss[it - 1]] = 0
+        # if ("bn" in name) and ("running_var" in name):
+        #     param.data[combinationss[it - 1]] = 0
+
 
 def iterate(mode, args, loader, model, optimizer, logger, epoch):
     block_average_meter = AverageMeter()
@@ -205,6 +231,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         else:
             with torch.no_grad():
                 pred = model(batch_data)
+
 
         vis=False
         if vis:
@@ -262,10 +289,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             smooth_loss = smoothness_criterion(pred) if args.w2 > 0 else 0
 
             # backprop
+
+
+
             loss = depth_loss + args.w1 * photometric_loss + args.w2 * smooth_loss
             optimizer.zero_grad()
             loss.backward()
+            zero_params(model)
             optimizer.step()
+
+
 
         gpu_time = time.time() - start
 
@@ -520,12 +553,12 @@ def main():
                                   checkpoint['epoch'])
         return
 
-    for name, param in model.named_parameters():
-    #for name, param in model.state_dict().items():
-        #print(name, param.shape)
-        if "parameter" not in name:
-        #if 1:
-            h = param.register_hook(lambda grad: grad * 0)  # double the gradient
+    # for name, param in model.named_parameters():
+    # #for name, param in model.state_dict().items():
+    #     #print(name, param.shape)
+    #     if "parameter" not in name:
+    #     #if 1:
+    #         h = param.register_hook(lambda grad: grad * 0)  # double the gradient
 
     # main loop
     print("=> starting main loop ...")
