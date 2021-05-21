@@ -124,6 +124,7 @@ parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
+parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -223,9 +224,9 @@ def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
             if depth_adjust and args.use_d:
                 if args.type_feature == "sq":
                     if args.use_rgb:
-                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, batch_data['rgb'],it_random_test, )
+                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, args.ranks_file, batch_data['rgb'],it_random_test, )
                     else:
-                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i, None, it_random_test)
+                        depth_new = depth_adjustment(batch_data['d'], adjust_features, i,  args.ranks_file,None, it_random_test)
                 elif args.type_feature == "lines":
                     depth_new = depth_adjustment_lines(batch_data['d'])
 
@@ -330,9 +331,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         if depth_adjust and args.use_d:
             if args.type_feature == "sq":
                 if args.use_rgb:
-                    depth_new = depth_adjustment(batch_data['d'], adjust_features, i, batch_data['rgb'])
+                    depth_new = depth_adjustment(batch_data['d'], adjust_features, i, args.ranks_file, batch_data['rgb'])
                 else:
-                    depth_new = depth_adjustment(batch_data['d'], adjust_features, i)
+                    depth_new = depth_adjustment(batch_data['d'], adjust_features, i, args.ranks_file)
             elif args.type_feature == "lines":
                 depth_new = depth_adjustment_lines(batch_data['d'])
 
@@ -472,6 +473,8 @@ def main():
             args.use_rgb = args_new.use_rgb
             args.use_d = args_new.use_d
             args.input = args_new.input
+            args.evaluate = args_new.evaluate
+            args.ranks_file = args_new.ranks_file
             is_eval = True
             print("Completed.")
         else:

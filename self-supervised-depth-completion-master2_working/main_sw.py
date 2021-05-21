@@ -456,9 +456,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
 
     if args.evaluate:
-        filename = os.path.split(args.evaluate)[1]
+        #filename = os.path.split(args.evaluate)[1]
         Ss_numpy = np.array(Ss)
-        np.save(f"ranks/instance/Ss_val_{filename}.npy", Ss)
+        folder_and_name = args.evaluate.split(os.sep)[-2:]
+        os.makedirs(f"ranks/instance/{folder_and_name[0]}", exist_ok=True)
+        np.save(f"ranks/instance/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}.npy", Ss)
 
     return avg, is_best
 
@@ -533,11 +535,19 @@ def main():
                                                    sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
     val_dataset = KittiDepth('val', args)
+    # val_loader = torch.utils.data.DataLoader(
+    #     val_dataset,
+    #     batch_size=1,
+    #     shuffle=False,
+    #     num_workers=2,
+    #     pin_memory=True)  # set batch size to be 1 for validation
+    # print("\t==> val_loader size:{}".format(len(val_loader)))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
     val_loader = torch.utils.data.DataLoader(
-        val_dataset,
+        val_dataset_sub,
         batch_size=1,
         shuffle=False,
-        num_workers=2,
+        num_workers=0,
         pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 

@@ -14,7 +14,7 @@ from features.show_lines import save_pic
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
+def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=None):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
 
@@ -81,15 +81,16 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
         squares = np.load(f"ranks/switches_argsort_2D_equal_iter_205.npy")[-10:]
     elif sq_mode =="switch_local":
         #name = "checkpoint_qnet-0_i_1100_typefeature_sq.pth.tar"
-        name = "checkpoint_qnet-0_i_1100_typefeature_sq.pth.tar"
+        name = "checkpoint_qnet-0_i_17000_typefeature_sq.pth_lr=0.0001.bs=1.wd=0.0.tar"
+        name = folder_and_name[1]
         if not os.path.isfile(f"ranks/instance/Ss_val_argsort_{name}.npy"):
-            sq = np.load(f"ranks/instance/Ss_val_{name}.npy")
+            sq = np.load(f"ranks/instance/{folder_and_name[0]}/Ss_val_{name}.npy")
             sq_argsort_local=[]
             for i in range(sq.shape[0]):
                 sq_argsort_local.append(np.argsort(sq[i], None))
             sq_argsort_local = np.array(sq_argsort_local)
-            np.save(f"ranks/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
-        squares_local = np.load(f"ranks/instance/Ss_val_argsort_{name}.npy")
+            np.save(f"ranks/instance/{folder_and_name[0]}/Ss_val_argsort_{name}.npy", sq_argsort_local)
+        squares_local = np.load(f"ranks/instance/{folder_and_name[0]}/Ss_val_argsort_{name}.npy")
         squares = squares_local[iter, -10:]
 
 
