@@ -431,7 +431,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
 
-        every=990 if mode == "val" else 200
+        every=999 if mode == "val" else 200
         if i % every ==0:
 
             print("saving")

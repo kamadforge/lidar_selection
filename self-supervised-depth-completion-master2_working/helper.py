@@ -234,7 +234,7 @@ def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, 
     if 1:
         prev_checkpoint_filename = os.path.join(
             output_directory, f'checkpoint_qnet-{str(epoch - 1)}_i_{i-every}_typefeature_{type_feature}.pth.tar')
-        if os.path.exists(prev_checkpoint_filename) and ((i-every) % 500 != 0):
+        if os.path.exists(prev_checkpoint_filename) and ((i-every) % 20000 != 0):
             os.remove(prev_checkpoint_filename)
 
 
