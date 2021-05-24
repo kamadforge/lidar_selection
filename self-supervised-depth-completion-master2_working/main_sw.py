@@ -24,6 +24,8 @@ from inverse_warp import Intrinsics, homography_from
 
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+print(sys.version)
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
