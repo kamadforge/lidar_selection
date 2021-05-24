@@ -1,6 +1,8 @@
 # This function is used to create a mask which can be used for evaluating the model on the subset of features
 
 
+# image saving is at save_pic and draw
+
 import numpy as np
 import os
 
@@ -105,7 +107,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     #     ii+=1
 
 
-    if rgb != None and 1 and (iter % 1)==0:
+    if rgb != None and 0 and (iter % 1)==0:
         draw("sq", rgb, depth, squares, A.shape[1], str(iter)+"_"+str(sub_iter))
 
     ver = np.floor(squares // A.shape[1])
@@ -119,7 +121,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
 
         depth=mask_new*depth
 
-        save_pic(mask_new, "sq_"+sq_mode)
+        #save_pic(mask_new, "sq_"+sq_mode)
 
 
     remove_depth=0

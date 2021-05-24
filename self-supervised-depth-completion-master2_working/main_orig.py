@@ -1,5 +1,7 @@
 #--data-folder /home/kamil/Dropbox/Current_research/data/kitti -e /home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar
 
+#saved depth_predicted
+
 import argparse
 import os
 import time
@@ -345,7 +347,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         else:
             with torch.no_grad():
                 pred = model(batch_data)
-                torch.save(pred, f"depth_predicted/{name[:-4]}.t")
+                #torch.save(pred, f"depth_predicted/{name[:-4]}.t")
         # im = batch_data['d'].detach().cpu().numpy()
         # im_sq = im.squeeze()
         # plt.figure()
