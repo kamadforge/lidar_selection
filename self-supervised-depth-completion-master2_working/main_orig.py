@@ -117,8 +117,8 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+# parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
 
@@ -330,7 +330,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # adjust depth
         depth_adjust=args.depth_adjust
         adjust_features=False
-        if depth_adjust and args.use_d:
+        if depth_adjust and args.use_d and args.evaluate:
             if args.type_feature == "sq":
                 if args.use_rgb:
                     depth_new = depth_adjustment(batch_data['d'], adjust_features, i, args.ranks_file, batch_data['rgb'])
@@ -519,7 +519,8 @@ def main():
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
-        train_loader = torch.utils.data.DataLoader(train_dataset,
+        train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(10))
+        train_loader = torch.utils.data.DataLoader(train_dataset_sub,
                                                    batch_size=args.batch_size,
                                                    shuffle=True,
                                                    num_workers=args.workers,
@@ -528,7 +529,7 @@ def main():
         print("\t==> train_loader size:{}".format(len(train_loader)))
     val_dataset = KittiDepth('val', args)
 
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(10))
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
