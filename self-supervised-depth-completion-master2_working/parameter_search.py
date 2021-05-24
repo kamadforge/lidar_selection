@@ -9,11 +9,11 @@ for lr in [0.0001, 1e-5]:
         for iter in [50000, 85500]:
             for ep in [0,1,2,3,4]:
 
-                print(f"\nlr: {lr} and wd: {wd} iter: {iter}\n")
+                print(f"\nlr: {lr} and wd: {wd} ep: {ep} iter: {iter}\n")
 
-                path_name1 = f"/home/kadamczewski/Dropbox_from/Current_research/depth_completion/results/mode=dense.input=gd.resnet34.criterion=l2.lr={lr}.bs=1.wd={wd}.pretrained=False.jitter=0.1.time=2021-05-21@13-01/checkpoint_qnet-0_i_{iter}_typefeature_sq.pth.tar"
+                path_name1 = f"/home/kadamczewski/Dropbox_from/Current_research/depth_completion/results/mode=dense.input=gd.resnet34.criterion=l2.lr={lr}.bs=1.wd={wd}.pretrained=False.jitter=0.1.time=2021-05-21@13-01/checkpoint_qnet-{ep}_i_{iter}_typefeature_sq.pth.tar"
                 
-                path_name2 = f"/home/kadamczewski/Dropbox_from/Current_research/depth_completion/results/mode=dense.input=gd.resnet34.criterion=l2.lr={lr}.bs=1.wd={wd}.pretrained=False.jitter=0.1.time=2021-05-21@13-02/checkpoint_qnet-0_i_{iter}_typefeature_sq.pth.tar"
+                path_name2 = f"/home/kadamczewski/Dropbox_from/Current_research/depth_completion/results/mode=dense.input=gd.resnet34.criterion=l2.lr={lr}.bs=1.wd={wd}.pretrained=False.jitter=0.1.time=2021-05-21@13-02/checkpoint_qnet-{ep}_i_{iter}_typefeature_sq.pth.tar"
                 
                 if os.path.isfile(path_name1): 
                    path_name = path_name1
