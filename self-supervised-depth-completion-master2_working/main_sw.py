@@ -438,7 +438,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
 
-        every = 50
+        every = 1000
         if i % every ==0:
 
             print("saving")

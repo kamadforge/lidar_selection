@@ -124,7 +124,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--depth_adjust', default=1, type=int)
+parser.add_argument('--depth_adjust', default=0, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
 
@@ -520,7 +520,7 @@ def main():
     if not is_eval:
         train_dataset = KittiDepth('train', args)
         train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(10))
-        train_loader = torch.utils.data.DataLoader(train_dataset_sub,
+        train_loader = torch.utils.data.DataLoader(train_dataset,
                                                    batch_size=args.batch_size,
                                                    shuffle=True,
                                                    num_workers=args.workers,
@@ -529,7 +529,7 @@ def main():
         print("\t==> train_loader size:{}".format(len(train_loader)))
     val_dataset = KittiDepth('val', args)
 
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(10))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
