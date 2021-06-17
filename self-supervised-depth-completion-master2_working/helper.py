@@ -224,9 +224,11 @@ def adjust_learning_rate(lr_init, optimizer, epoch):
 
 def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, every=50, qnet=None):
 
-    if is_best:
+
+    if is_best or qnet:
         checkpoint_filename = os.path.join(output_directory, f'checkpoint_qnet-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
         torch.save(state, checkpoint_filename)
+        print("checkpoint saved")
 
         # best_filename = os.path.join(output_directory, f'model_best-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
         # shutil.copyfile(checkpoint_filename, best_filename)

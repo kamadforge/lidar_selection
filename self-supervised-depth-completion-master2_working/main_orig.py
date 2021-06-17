@@ -124,9 +124,10 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--depth_adjust', default=0, type=int)
+parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
+#parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
+parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/instance/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.0001.bs=1.wd=0.01.pretrained=False.jitter=0.1.time=2021-06-16@12-22/Ss_val_checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar.npy")
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -140,7 +141,13 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
+
+if args.evaluate:
+    args.ranks_file = args.ranks_file.split(os.sep)[-3:] #folder and name
+
 print(args)
+
+
 
 
 print("\nEvaluate: ", args.evaluate)
