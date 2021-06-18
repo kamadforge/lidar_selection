@@ -315,7 +315,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             #print("*************swiches:")
-            torch.set_printoptions(precision=6, sci_mode=False)
+            torch.set_printoptions(precision=7, sci_mode=False)
 
             if model.module.phi is not None:
                 mmp = 1000 * model.module.phi
@@ -336,6 +336,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
             # GLOBAL
             if (i % args.every ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
+
+                np.set_printoptions(precision=4)
 
                 switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
                 switches_2d_sort = np.sort(S_numpy, None)

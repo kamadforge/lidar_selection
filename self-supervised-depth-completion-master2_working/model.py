@@ -729,6 +729,24 @@ class DepthCompletionNetQSquare(nn.Module):
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
         S = self.phi / torch.sum(self.phi)
+
+        ### without self, probably doesn't matter
+        # pre_phi = self.parameter
+        # # print(self.parameter)
+        # phi = F.softplus(self.parameter)
+        #
+        # # if any(torch.isnan(phi)):
+        # if any(torch.flatten(torch.isnan(phi))):
+        #     print("some Phis are NaN")
+        # # it looks like too large values are making softplus-transformed values very large and returns NaN.
+        # # this occurs when optimizing with a large step size (or/and with a high momentum value)
+        #
+        # S = phi / torch.sum(phi)
+
+        ####
+
+
+
         #print("S from model", S)
         #print("parameter from model", self.parameter)
 
