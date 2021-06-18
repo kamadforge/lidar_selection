@@ -298,7 +298,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             loss = depth_loss + args.w1 * photometric_loss + args.w2 * smooth_loss
             optimizer.zero_grad()
             loss.backward()
-            #zero_params(model)
+            zero_params(model)
             optimizer.step()
 
 
@@ -579,12 +579,12 @@ def main():
         result, is_best = iterate("val", args, val_loader, model, None, logger, checkpoint['epoch'])
         return
 
-    for name, param in model.named_parameters():
-    #for name, param in model.state_dict().items():
-        #print(name, param.shape)
-        if "parameter" not in name:
-        #if 1:
-            h = param.register_hook(lambda grad: grad * 0)  # double the gradient
+    # for name, param in model.named_parameters():
+    # #for name, param in model.state_dict().items():
+    #     #print(name, param.shape)
+    #     if "parameter" not in name:
+    #     #if 1:
+    #         h = param.register_hook(lambda grad: grad * 0)  # double the gradient
 
     # main loop
     print("=> starting main loop ...")
