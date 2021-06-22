@@ -232,6 +232,7 @@ class DepthCompletionNetQ(nn.Module):
         num = 65
         self.parameter = Parameter(-1e-10 * torch.ones((num)), requires_grad=True)
         self.parameter_mask = torch.Tensor(np.load("features/kitti_pixels_to_lines_masks.npy", allow_pickle=True)).to(device)
+        self.phi = None
 
         if 'd' in self.modality:
             channels = 64 // len(self.modality)
@@ -320,14 +321,30 @@ class DepthCompletionNetQ(nn.Module):
 
         pre_phi = self.parameter
         # print(self.parameter)
-        phi = F.softplus(self.parameter)
+        self.phi = F.softplus(self.parameter)
 
-        if any(torch.isnan(phi)):
+        # if any(torch.isnan(phi)):
+        if any(torch.flatten(torch.isnan(self.phi))):
             print("some Phis are NaN")
         # it looks like too large values are making softplus-transformed values very large and returns NaN.
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
-        S = phi / torch.sum(phi)
+        S = self.phi / torch.sum(self.phi)
+
+        ###
+
+        # pre_phi = self.parameter
+        # # print(self.parameter)
+        # phi = F.softplus(self.parameter)
+        #
+        # if any(torch.isnan(phi)):
+        #     print("some Phis are NaN")
+        # # it looks like too large values are making softplus-transformed values very large and returns NaN.
+        # # this occurs when optimizing with a large step size (or/and with a high momentum value)
+        #
+        # S = phi / torch.sum(phi)
+
+        #########
 
         # Slen=len(S)
         # S_expand = S.repeat(x['d'].shape[-1]).reshape(Slen, x['d'].shape[-1])

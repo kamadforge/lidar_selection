@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from dataloaders.kitti_loader_curr import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader_new import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet
 from metrics import AverageMeter, Result
 import criteria
@@ -122,13 +122,23 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--sparse_depth_source', default='nonbin')
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
+parser.add_argument('--sparse_depth_source', default='bin')
 parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
-
-
 args = parser.parse_args()
+
+
+if args.evaluate == "1":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
+elif args.evaluate == "2":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+
+if args.resume == "1":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
+elif args.resume == "2":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
 args.result = os.path.join('..', f'results/qnet/{os.path.split(args.resume)[1]}')
@@ -211,9 +221,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     torch.set_printoptions(profile="full")
     for i, batch_data in enumerate(loader):
 
-        name = batch_data['name'][0]
-        print(name)
-        del batch_data['name']
+        # name = batch_data['name'][0]
+        # print(name)
+        # del batch_data['name']
         print("i: ", i)
         # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()
@@ -318,11 +328,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             torch.set_printoptions(precision=7, sci_mode=False)
 
             if model.module.phi is not None:
-                mmp = 1000 * model.module.phi
+                mmp = 1000 * model.module.parameter
                 phi = F.softplus(mmp)
-
                 S = phi / torch.sum(phi)
-                print("S", S[1, -10:])
+
+                # BAD
+                # mmp = 1000 * model.module.phi
+                # phi = F.softplus(mmp)
+                # S = phi / torch.sum(phi)
+
+                #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
 
             if args.instancewise:
@@ -348,6 +363,22 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 print(switches_2d_argsort[-10:])
                 print(switches_2d_sort[-10:])
 
+                ##### saving global ranks
+                global_ranks_path = lambda \
+                    ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
+                # removing previous checkpoint
+                global old_i
+                if ("old_i" in globals()):
+                    print("old_i")
+                    if os.path.isfile(global_ranks_path(old_i)):
+                        os.remove(global_ranks_path(old_i))
+
+                folder_and_name = args.resume.split(os.sep)[-2:]
+                os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
+                np.save(global_ranks_path(i), S_numpy)
+                old_i = i
+                print("saving ranks")
+
                 if args.type_feature == "sq":
 
                     hor = switches_2d_argsort % S_numpy.shape[1]
@@ -355,33 +386,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     print(ver[:10],hor[:10])
                     print("and")
                     print(ver[-10:], hor[-10:])
-                    # if type_feature == "sq":
-                    #     print(switches_2d_argsort)
-                    # elif type_feature == "lines":
-                    #     print(torch.argsort(S))
-                    #np.save(f"ranks/switches_argsort_2D_equal_iter_{i}.npy", switches_2d_argsort)
-                    #np.save(f"ranks/switches_2D_equal_iter_{i}.npy", S_numpy)
-
-                    global_ranks_path = lambda ii : f"ranks/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
-                    global old_i
-                    if ("old_i" in globals()):
-                        print("old_i")
-                        if os.path.isfile(global_ranks_path(old_i)):
-                            os.remove(global_ranks_path(old_i))
-                    folder_and_name = args.resume.split(os.sep)[-2:]
-                    os.makedirs(f"ranks/global/{folder_and_name[0]}", exist_ok=True)
-                    np.save(global_ranks_path(i),S_numpy)
-                    old_i=i
-
-                elif args.type_feature == "lines":
-                    np.save(f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy", switches_2d_argsort)
-                    np.save(f"ranks/switches_2D_equal_lines_iter_{i}.npy", S_numpy)
-                    if "last_argsort" in locals():
-                        os.remove(last_argsort)
-                        os.remove(last_switches)
-                    last_argsort = f"ranks/switches_argsort_2D_equal_lines_iter_{i}.npy"
-                    last_switches =  f"ranks/switches_2D_equal_lines_iter_{i}.npy"
-
 
 
         # measure accuracy and record loss
@@ -416,11 +420,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 for ii in range(print_square_num):
                     s_hor=hor[-ii].detach().cpu().numpy()
                     s_ver=ver[-ii].detach().cpu().numpy()
-                    #print("Top square switches: ")
-                    #print(s_ver, s_hor)
                     shape = [(s_hor * size, s_ver * size), ((s_hor + 1) * size, (s_ver + 1) * size)]
-                    #print("shape: ", shape)
-
                     img1.rectangle(shape, outline="red")
 
                     tim = time.time()
@@ -530,6 +530,9 @@ def main():
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]
+
+
+
     optimizer = torch.optim.Adam(model_named_params,
                                  lr=args.lr,
                                  weight_decay=args.weight_decay)
