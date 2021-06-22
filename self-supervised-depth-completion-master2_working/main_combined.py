@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
 from dataloaders.kitti_loader_curr import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet
+from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNet # last one is the original
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -25,6 +25,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 print(sys.version)
+
+# for main_orig
+from features.depth_manipulation import depth_adjustment, depth_adjustment_lines
+from features.depth_draw import draw
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
@@ -126,7 +130,13 @@ parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
+parser.add_argument('--mode', default="switch")
 
+# main_orig
+
+parser.add_argument('--depth_adjust', default=1, type=int)
+#parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
+parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/instance/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.0001.bs=1.wd=0.01.pretrained=False.jitter=0.1.time=2021-06-16@12-22/Ss_val_checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar.npy")
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)

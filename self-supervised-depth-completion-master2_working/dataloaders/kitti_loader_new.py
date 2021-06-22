@@ -19,6 +19,8 @@ import matplotlib.pyplot as plt
 # binary file read
 from run_batch_kitti_pt_line_repro import load_from_bin, velo_points_filter, velo3d_2_camera2d_points, calib_oxts2velo, velo_point_rectify_egomotion, ego_motion_compute_each_lidar_scan
 
+# combination of kitti_loader and kitti_loader_curr
+
 input_options = ['d', 'rgb', 'rgbd', 'g', 'gd']
 
 
@@ -173,7 +175,7 @@ params = np.zeros((len(bin_ver2)-1, len(bin_hor2)-1))
 values1  = []
 np.save("value.npy", values1)
 
-def depth_read(filename, depth_mode, depth_source):
+def depth_read(filename, depth_mode, type_feature, depth_source, adjust_depth=False):
     # loads depth map D from png file
     # and returns it as a numpy array,
     # for details see readme.txt
@@ -292,7 +294,7 @@ def depth_read(filename, depth_mode, depth_source):
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, depth_points, bins_2d_depth):
+def depth_adjustment(depth, depth_points, bins_2d_depth, adjust_depth=False):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
 
@@ -488,6 +490,7 @@ class KittiDepth(data.Dataset):
         self.K = load_calib()
         self.threshold_translation = 0.1
         self.sparse_depth_source = args.sparse_depth_source
+        self.type_feature = args.type_feature
 
 
 
@@ -495,9 +498,9 @@ class KittiDepth(data.Dataset):
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
-        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.sparse_depth_source) if \
+        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.type_feature, self.sparse_depth_source) if \
             (self.paths['d'][index] is not None and self.args.use_d) else None
-        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.sparse_depth_source) if \
+        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.type_feature, self.sparse_depth_source) if \
             self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
