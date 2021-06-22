@@ -63,6 +63,12 @@ def get_paths_and_transform(split, args):
             'data_depth_annotated/train/*_sync/proj_depth/groundtruth/image_0[2,3]/*.png'
         )
 
+        # def get_rgb_paths(p):
+        #     ps = p.split('/')
+        #     pnew = '/'.join([args.data_folder] + ['data_rgb'] + ps[-6:-4] +
+        #                     ps[-2:-1] + ['data'] + ps[-1:])
+        #     return pnew
+
         def get_rgb_paths(p):
             ps = p.split('/')
             # pnew = '/'.join([args.data_folder] + ['data_rgb'] + ps[-6:-4] +
@@ -167,8 +173,7 @@ params = np.zeros((len(bin_ver2)-1, len(bin_hor2)-1))
 values1  = []
 np.save("value.npy", values1)
 
-def depth_read(filename, depth_mode, type_feature, depth_source, adjust_depth=False):
-
+def depth_read(filename, depth_mode, depth_source):
     # loads depth map D from png file
     # and returns it as a numpy array,
     # for details see readme.txt
@@ -188,13 +193,13 @@ def depth_read(filename, depth_mode, type_feature, depth_source, adjust_depth=Fa
     depth = np.expand_dims(depth, -1)
     #print(depth[140][-100:].squeeze())
 
-    # reading sparse from binary files
+
     bins = None
-    if depth_mode=="sparse" and depth_source=="bin":
+    #if depth_mode=="sparse" and depth_source=="bin":
+    if depth_mode == "sparse":
         #alternative velodyne
         #print(filename)
-
-        #getting path of the bin depth file
+        
         if socket.gethostname()!='kamilblade':
            
             path_main = filename[:31]
@@ -206,6 +211,7 @@ def depth_read(filename, depth_mode, type_feature, depth_source, adjust_depth=Fa
                 folder1 = filename[83:93]
                 folder2 = filename[83:109]
                 file = filename[-23:-13] + ".bin"
+                
         else:
         
             path_main = filename[:47]
@@ -220,84 +226,40 @@ def depth_read(filename, depth_mode, type_feature, depth_source, adjust_depth=Fa
 
         path_binary = os.path.join(path_main, "data_rgb/all", folder1, folder2, "velodyne_points/data", file)
         #print("bin: ", path_binary)
+
         path_folder1 = os.path.join(path_main, "data_rgb/all", folder1)
+
         velo_points = load_from_bin(path_binary)
+
         v2c_filepath = dirname(dirname(dirname(dirname(path_binary)))) + '/calib_velo_to_cam.txt'
         c2c_filepath = dirname(dirname(dirname(dirname(path_binary)))) + '/calib_cam_to_cam.txt'
+
         #velo_path = subdir + '/' + file
 
-        # transforming the binary points and getting lines
         mode='02'
         image_rgb = cv2.imread(path_binary)
         xyz_changed = ego_motion_compute_each_lidar_scan(dirname(path_binary), file)
         velo_points_rectified = velo_point_rectify_egomotion(velo_points, xyz_changed)
         # compute depth, line ids and then project them to camera coords from velo coords
         coords_, pt_c, pt_dep, line_id, line_c = velo3d_2_camera2d_points(velo_points_rectified,v_fov=(-24.9, 2.0),h_fov=(-45, 45),vc_path=v2c_filepath,cc_path=c2c_filepath, mode=mode)
-
-        #sieve through the points
-        coords_new=[]; line_id_new=[]
-        for i in range(len(coords_[0])):
-            hor = int(np.floor(coords_[0][i]))
-            ver = int(np.floor(coords_[1][i]))
-            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0]:
-                coords_new.append(coords_[:, i]); line_id_new.append(line_id[i])
-        coords_new = np.array(coords_new)
-        line_id_new = np.array(line_id_new)
+        #inds = np.where((coords_[1] >= 139) & (coords_[1] <= 141) & (coords_[0] > 1300))
 
         # copying and pruning (last condition)
         #important_lines = [30,  7, 17, 20,  2,  1,  3,  4]
-        lines_num = 65
-        important_lines = np.arange(lines_num)
-
-        if adjust_depth and type_feature=="lines":
-            #line adjustment
-            # create line_ids vecotor with the same number of points for each line,
-            #sample if too many, remove all if too few
-            # it has line number if selected and -1 if not
-            sel_line_id = np.ones(coords_new.shape[0])*(-1)
-            line_pts_num=np.zeros(lines_num)
-            # recording the number of points in each line
-            if "line_pts_num_all" not in globals():
-                global line_pts_num_all
-                line_pts_num_all=np.zeros(lines_num)
-            # count the number of all points in each line, and selecting a subset
-            for p in range(lines_num):
-                line_id_inds = np.where(line_id_new==p)[0]
-                line_pts_num[p] = len(line_id_inds)
-                pts_sel = 100 # number of points in a line
-                lines_selected=np.arange(65)
-                #lines_selected=[6,8,10,12]
-                if len(line_id_inds)>pts_sel and p in lines_selected:
-                    line_id_inds_rand = np.random.choice(line_id_inds, pts_sel, replace=False)
-                    sel_line_id[line_id_inds_rand]=p
-            print(f"\n\npts depth: {len(np.where(sel_line_id>-1)[0])}")
-            line_pts_num_all+=line_pts_num
-            np.set_printoptions(suppress=True)
-            print(f"line ids nums: {line_pts_num_all}")
-            print("lines by num of points: ", np.argsort(-line_pts_num_all))
-
-    if depth_mode=="sparse" and depth_source=="bin":
-
-        #copying points from (num_pts,2) shape to the (y_im, x_im, depth)
-        # for both squares and lines
-        # but for squares we'll do adjustment afterwards
-        # and for lines we already possinly did
+        important_lines = np.arange(65)
         depth_binary = np.zeros_like(depth)
-        for i in range(coords_new.shape[0]):
-            # selects from all depth points, so that we have the same num for each line
-            if type_feature=="sq" or type_feature=="None" or (adjust_depth and sel_line_id[i]>-1 and type_feature=="lines") or type_feature=="lines":
-                hor = int(np.floor(coords_new[i][0]))
-                ver = int(np.floor(coords_new[i][1]))
+        for i in range(len(coords_[0])):
+            hor = int(np.floor(coords_[0][i]))
+            ver = int(np.floor(coords_[1][i]))
+            if hor > 0 and ver > 0 and hor < depth.shape[1] and ver < depth.shape[0] and line_c[i] in important_lines:
                 depth_binary[ver, hor] = pt_dep[i]
         depth = depth_binary
+        depth_points = np.where(depth>0)
+        #depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]
 
-
-    if type_feature=="sq": #both for im and bin sprase mode
-
-        depth_points = np.where(depth > 0)
         #binning
         size_of_bin = 40
-        #print(depth.shape)
+        print(depth.shape)
         bin_ver=np.arange(0, oheight, size_of_bin)
         bin_ver=np.append(bin_ver, oheight)
         bin_hor=np.arange(0, owidth, size_of_bin)
@@ -324,18 +286,7 @@ def depth_read(filename, depth_mode, type_feature, depth_source, adjust_depth=Fa
 
         bins = bins_2d_depth.statistic
 
-        #uncomment!
-        depth = depth_adjustment(depth, depth_points, bins_2d_depth)
-
-
-    #print(f"Number of depth points: {len(np.where(depth>0)[0])}")
-
-
-    if depth_source:
-        print("kitti loader:")
-        print(f"depth {depth_mode} and {depth_source} pts: ", len(np.where(depth)[0] > 0))
-    else:
-        print(f"depth {depth_mode} pts: ", len(np.where(depth)[0] > 0))
+        depth_adjustment(depth, depth_points, bins_2d_depth)
 
     return depth, bins #375, 1242 #376, 1241
 
@@ -347,7 +298,7 @@ def depth_adjustment(depth, depth_points, bins_2d_depth):
 
     depth_new = np.zeros_like(depth)
     # find the set of points for each bin
-    max_bin = 400 #max(bins_2d_depth.binnumber)
+    max_bin = 400 if len(bins_2d_depth.binnumber) else max(bins_2d_depth.binnumber)
     for i in range(max_bin):
         #print("bin", i)
         bin_i_points = np.where(bins_2d_depth[3] == i)[0]
@@ -394,14 +345,13 @@ def depth_adjustment(depth, depth_points, bins_2d_depth):
 
             depth_sub_new = np.expand_dims(depth_sub_new, axis=2)
 
-            # adding the means of the points to the center of the square, doing try because of the remainder part at the end of the image which may not fit
             try:
                 #print(sub_meshgrid)
                 depth_new[sub_meshgrid] = depth_sub_new
             except:
                 print("err")
 
-    #print(len(np.where(depth_new>0)[0]))
+    print(len(np.where(depth_new>0)[0]))
 
     return depth_new
 
@@ -537,24 +487,25 @@ class KittiDepth(data.Dataset):
         self.transform = transform
         self.K = load_calib()
         self.threshold_translation = 0.1
-        self.type_feature = args.type_feature
         self.sparse_depth_source = args.sparse_depth_source
+
+
 
 
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
-        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.type_feature, self.sparse_depth_source) if \
+        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.sparse_depth_source) if \
             (self.paths['d'][index] is not None and self.args.use_d) else None
-        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.type_feature, self.sparse_depth_source) if \
+        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.sparse_depth_source) if \
             self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
-        #draw_features(rgb, bins)
-        return rgb, sparse, target, rgb_near, os.path.split(self.paths['d'][index])[1]
+        draw_features(rgb, bins)
+        return rgb, sparse, target, rgb_near
 
     def __getitem__(self, index):
-        rgb, sparse, target, rgb_near, name = self.__getraw__(index)
+        rgb, sparse, target, rgb_near = self.__getraw__(index)
         rgb, sparse, target, rgb_near = self.transform(rgb, sparse, target,
                                                        rgb_near, self.args)
         r_mat, t_vec = None, None
@@ -571,7 +522,6 @@ class KittiDepth(data.Dataset):
                 r_mat = np.eye(3)
 
         rgb_col = rgb
-        #return rgb None if the option in args.input is not rgb
         rgb, gray = handle_gray(rgb, self.args)
         candidates = {"rgb":rgb, "d":sparse, "gt":target, \
             "g":gray, "r_mat":r_mat, "t_vec":t_vec, "rgb_near":rgb_near}
@@ -579,7 +529,7 @@ class KittiDepth(data.Dataset):
             key: to_float_tensor(val)
             for key, val in candidates.items() if val is not None
         }
-        items["name"]=name
+
         return items
 
     def __len__(self):
