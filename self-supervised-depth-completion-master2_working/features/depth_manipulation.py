@@ -61,7 +61,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     ver = np.floor(A_2d_argsort // A.shape[1])
     hor = A_2d_argsort % A.shape[1]
 
-    TOP_SELECTED = 10
+    TOP_SELECTED = 200
 
     coord_sorted = np.stack([ver, hor]).transpose()
     print("Squares by the most points")
@@ -84,9 +84,10 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     elif sq_mode == "switch":
         name = folder_and_name[1]
         #squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")
-        square_switches = np.load("ranks/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_120.npy")
-        square_argsort = np.argsort(square_switches, None)
-        squares = square_argsort[:TOP_SELECTED]
+        #square_switches = np.load("ranks/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_120.npy")
+        #square_argsort = np.argsort(square_switches, None)
+        square_argsort = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_iter_100.npy")
+        squares = square_argsort[-TOP_SELECTED:]
     elif sq_mode =="switch_local":
         name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
         name = folder_and_name[2]
@@ -211,7 +212,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
 def depth_adjustment_lines(depth):
 
     depth = depth.detach().cpu().numpy().squeeze()
-    masks = np.load("kitti_pixels_to_lines_masks.npy")
+    masks = np.load("features/kitti_pixels_to_lines_masks.npy")
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
@@ -227,7 +228,11 @@ def depth_adjustment_lines(depth):
         lines_ptsargsort = np.argsort(lines_pts)
         lines = lines_ptsargsort[-10:]
     elif lines_mode == "switch":
-        lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1230.npy")
+        ranks_file = f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_6640_kittidepthcurr_noadjust_sparse_bin.npy"
+        #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1230.npy")
+        lines = np.load(ranks_file)
+        #print(f"Loaded ranks from {ranks_file}")
+        lines = np.argsort(lines)
         lines = lines[ lines != 0]
         lines = lines[-10:]
     print(f"Lines used {lines_mode}: ", lines)
