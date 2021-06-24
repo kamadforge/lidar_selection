@@ -56,6 +56,24 @@ def conv_bn_relu(in_channels, out_channels, kernel_size, \
 
     return layers
 
+def lin_bn_relu(in_channels, out_channels, bn=False, relu=True):
+    bias = not bn
+    layers = []
+    layers.append(
+        nn.Linear(in_channels,
+                  out_channels))
+    if bn:
+        layers.append(nn.BatchNorm(out_channels))
+    if relu:
+        layers.append(nn.LeakyReLU(0.2, inplace=True))
+    layers = nn.Sequential(*layers)
+
+    # initialize the weights
+    for m in layers.modules():
+        init_weights(m)
+
+    return layers
+
 def convt_bn_relu(in_channels, out_channels, kernel_size, \
         stride=1, padding=0, output_padding=0, bn=True, relu=True):
     bias = not bn
@@ -1147,21 +1165,26 @@ class DepthCompletionNetQSquareNet(nn.Module):
             ) + min_distance  # the minimum range of Velodyne is around 3 feet ~= 0.9m
 
 
-####################
+################################################
+################################################
+################################################
 
 
 
-class DepthCompletionNetQSquareNet(nn.Module):
+
+class DepthCompletionNetQLinesNet(nn.Module):
     def __init__(self, args):
         assert (
             args.layers in [18, 34, 50, 101, 152]
         ), 'Only layers 18, 34, 50, 101, and 152 are defined, but got {}'.format(
             layers)
-        super(DepthCompletionNetQSquareNet, self).__init__()
+        super(DepthCompletionNetQLinesNet, self).__init__()
         self.modality = args.input
 
         self.img_height=352
         self.img_width=1216
+
+
         self.bin_ver = np.arange(0, self.img_height, 40)
         self.bin_ver = np.append(self.bin_ver, self.img_height)
         self.bin_hor = np.arange(0, self.img_width, 40)
@@ -1172,12 +1195,13 @@ class DepthCompletionNetQSquareNet(nn.Module):
         #self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
         self.parameter = Parameter(-1e-10 * torch.ones(len(self.bin_ver)-1 , len(self.bin_hor)-1))
         self.phi = None
-        #self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
+        self.parameter_mask = torch.Tensor(np.load("features/kitti_pixels_to_lines_masks.npy", allow_pickle=True)).to(device)
 
 ##################### Q-FIT LINES
 
         if 'd' in self.modality:
             channels = 64 // len(self.modality)
+            #channels = 16
             self.conv1_d_qfit = conv_bn_relu(1,
                                         channels,
                                         kernel_size=3,
@@ -1221,6 +1245,11 @@ class DepthCompletionNetQSquareNet(nn.Module):
                                        kernel_size=5,
                                        stride=2,
                                        padding=1)
+
+        self.flatten = nn.Flatten()
+        self.lin1 = nn.Linear(297, 65)
+
+        #self.fc1_qfit = lin_bn_relu(-1,65) #297
 
         # pretrained_model = resnet.__dict__['resnet{}'.format(
         #     args.layers)](pretrained=args.pretrained)
@@ -1339,72 +1368,41 @@ class DepthCompletionNetQSquareNet(nn.Module):
         conv3_qfit = self.conv3_qfit(conv2_qfit)
         conv4_qfit = self.conv4_qfit(conv3_qfit)
         conv5_qfit = self.conv5_qfit(conv4_qfit)
-        pre_phi = conv5_qfit.squeeze()[:, :-2]
-        self.phi = F.softplus(pre_phi)
+        flat = self.flatten(conv5_qfit)
+        fc1_qfit = self.lin1(flat)
+        #fc1_qfit = self.fc1_qfit(flat)
+        #pre_phi = conv5_qfit.squeeze()[:, :-2]
+        self.phi = F.softplus(fc1_qfit)
         ####################
 
-        # output = self.phi_fc1(x)
-        # # output = nn.functional.relu(self.phi_fc1(x))
-        # output = self.fc1_bn1(output)
-        # output = nn.functional.relu(self.phi_fc2(output))
-        # output = self.fc2_bn2(output)
-        # output = nn.functional.relu(self.phi_fc2b(output))
-        # output = self.fc2_bn2b(output)
-
-        # pre_phi = self.phi_fc3(output)
-
-        # phi = F.softplus(phi_parameter.mean(dim=0))
-        #phi = F.softplus(pre_phi)  # now the size of phi is mini_batch by input_dim
-        #
-        # if self.point_estimate:
-        #     # S = phi / torch.sum(phi)
-        #     # there is a switch vector for each sample
-        #     S = phi / torch.sum(phi, dim=1).unsqueeze(dim=1)  # [batch x featnum]
-        #     output = x * S
-
-
-
-        ##############3
-
-        # phi = F.softplus(self.parameter)
-
-        #if any(torch.isnan(phi)):
         if any(torch.flatten(torch.isnan(self.phi))):
             print("some Phis are NaN")
         # it looks like too large values are making softplus-transformed values very large and returns NaN.
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
         S = self.phi / torch.sum(self.phi)
-        #print("phi from model", self.phi[1, -10:])
-        #print("S from model", S[1, -10:])
-
-
-        #print("S argsor: ", np.argsort(S.detach().cpu().numpy(), None)[-10:])
-        #print("parameter from model", self.parameter)
-
-        # Slen=len(S)
-        # S_expand = S.repeat(x['d'].shape[-1]).reshape(Slen, x['d'].shape[-1])
-        # output = x['d'] * S_expand
-
+        S = S.squeeze()
         # switch mask
-        # S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])
-        # print(S_mask_ext[24][308][733])
-        # S_mask = torch.max(S_mask_ext, 0)[0]
-        # # for i in range(len(self.parameter)):
-        # #     print(f"{i}: {len(np.where(S_mask_ind.detach().cpu().numpy() == i)[0])}")
-        # print(x['d'].shape)
-        # output = x['d'] * S_mask
+        S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])
+        #print(S_mask_ext[24][308][733])
+        print(f"S: {S}")
+        S_mask = torch.max(S_mask_ext, 0)[0]
 
-        #switch many features
-        mask = torch.zeros((self.img_height, self.img_width)).to(device)
-        for i in range(len(self.bin_ver)-1):
-            for j in range(len(self.bin_hor)-1):
-                # print(self.bin_hor[i])
-                # print(self.bin_hor[i+1])
-                # print(self.bin_hor[j])
-                # print(self.bin_hor[j+1])
-                mask[self.bin_hor[i]:self.bin_hor[i+1], self.bin_hor[j]:self.bin_hor[j+1]]=S[i,j]#self.parameter[i,j]
-        output = x['d'] * mask
+        # for i in range(len(self.parameter)):
+        #     print(f"{i}: {len(np.where(S_mask_ind.detach().cpu().numpy() == i)[0])}")
+        output = x['d'] * S_mask
+
+        #
+        # #switch many features
+        # mask = torch.zeros((self.img_height, self.img_width)).to(device)
+        # for i in range(len(self.bin_ver)-1):
+        #     for j in range(len(self.bin_hor)-1):
+        #         # print(self.bin_hor[i])
+        #         # print(self.bin_hor[i+1])
+        #         # print(self.bin_hor[j])
+        #         # print(self.bin_hor[j+1])
+        #         mask[self.bin_hor[i]:self.bin_hor[i+1], self.bin_hor[j]:self.bin_hor[j+1]]=S[i,j]#self.parameter[i,j]
+        # output = x['d'] * mask
 
 
 

@@ -350,7 +350,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     depth_new = depth_adjustment(batch_data['d'], adjust_features, i, args.ranks_file)
             elif args.type_feature == "lines":
-                depth_new = depth_adjustment_lines(batch_data['d'])
+                depth_new = depth_adjustment_lines(batch_data['d'], adjust_features, i, args.ranks_file)
 
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
         data_time = time.time() - start

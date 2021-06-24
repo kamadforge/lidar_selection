@@ -73,7 +73,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "switch"
+    sq_mode = "switch_local"
     print(sq_mode)
 
     if sq_mode == "random":
@@ -209,16 +209,17 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     return depth
 
 
-def depth_adjustment_lines(depth):
+def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
 
     depth = depth.detach().cpu().numpy().squeeze()
     masks = np.load("features/kitti_pixels_to_lines_masks.npy")
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
+    TOP_SELECTED = 10
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "switch"
+    lines_mode = "switch_local"
     if lines_mode == "random":
         np.random.seed(15)
         lines = np.random.choice(lines_num, 10)
@@ -235,6 +236,27 @@ def depth_adjustment_lines(depth):
         lines = np.argsort(lines)
         lines = lines[ lines != 0]
         lines = lines[-10:]
+
+    elif lines_mode =="switch_local":
+        name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
+        name = folder_and_name[2]
+        # argsort the switches
+        ranks_file = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-06-23@12-44/Ss_val_checkpoint_qnet-0_i_2820_typefeature_lines.pth.tar.npy"
+        ranks_path = os.path.split(ranks_file)[0]
+        ranks_filename = os.path.split(ranks_file)[1]
+        ranks_filename_core = os.path.splitext(ranks_filename)[0]
+        ranks_file_argsort = os.path.join(ranks_path, ranks_filename_core + "argsort.npy" )
+        if not os.path.isfile(ranks_file_argsort):
+            sq = np.load(ranks_file)
+            lines_argsort_local = []
+            for i in range(sq.shape[0]):
+                lines_argsort_local.append(np.argsort(sq[i], None))
+            lines_argsort_local = np.array(lines_argsort_local)
+            np.save(ranks_file_argsort, lines_argsort_local)
+        lines_local = np.load(ranks_file_argsort)
+        #squares_local = np.load(f"ranks/{folder_and_name[0]}/instance/{folder_and_name[1]}/argsort_{name}.npy")
+        lines = lines_local[iter, -TOP_SELECTED:]
+
     print(f"Lines used {lines_mode}: ", lines)
 
     if select_mask:
