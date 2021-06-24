@@ -14,8 +14,8 @@ import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from dataloaders.kitti_loader_new import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
+from dataloaders.kitti_loader_curr import load_calib, oheight, owidth, input_options, KittiDepth
+from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNet # last one is the original
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -25,6 +25,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 print(sys.version)
+
+# for main_orig
+from features.depth_manipulation import depth_adjustment, depth_adjustment_lines
+from features.depth_draw import draw
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
@@ -123,22 +127,18 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--sparse_depth_source', default='bin')
-parser.add_argument('--instancewise', default=1)
+parser.add_argument('--sparse_depth_source', default='nonbin')
+parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
+parser.add_argument('--mode', default="switch")
+
+# main_orig
+
+parser.add_argument('--depth_adjust', default=1, type=int)
+#parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
+parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/instance/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.0001.bs=1.wd=0.01.pretrained=False.jitter=0.1.time=2021-06-16@12-22/Ss_val_checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar.npy")
+
 args = parser.parse_args()
-
-
-if args.evaluate == "1":
-    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
-elif args.evaluate == "2":
-    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
-
-if args.resume == "1":
-    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
-elif args.resume == "2":
-    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
-
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
 args.result = os.path.join('..', f'results/qnet/{os.path.split(args.resume)[1]}')
@@ -176,7 +176,6 @@ if args.use_pose:
     if cuda:
         kitti_intrinsics = kitti_intrinsics.cuda()
 
-# keep the original model parameters and not update them
 def zero_params(model):
     it = 0
     for name, param in model.state_dict().items():
@@ -222,9 +221,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     torch.set_printoptions(profile="full")
     for i, batch_data in enumerate(loader):
 
-        # name = batch_data['name'][0]
-        # print(name)
-        # del batch_data['name']
+        name = batch_data['name'][0]
+        print(name)
+        del batch_data['name']
         print("i: ", i)
         # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()
@@ -303,6 +302,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             smooth_loss = smoothness_criterion(pred) if args.w2 > 0 else 0
 
             # backprop
+
+
+
             loss = depth_loss + args.w1 * photometric_loss + args.w2 * smooth_loss
             optimizer.zero_grad()
             loss.backward()
@@ -317,7 +319,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
 
-        # local training
         if (i % 1 == 0 and args.evaluate and args.instancewise) or\
                 (i % args.every == 0 and not args.evaluate and not args.instancewise): # global training
             #    print(model.module.conv4[5].conv1.weight[0])
@@ -327,22 +328,15 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             torch.set_printoptions(precision=7, sci_mode=False)
 
             if model.module.phi is not None:
-                #mmp = 1000 * model.module.parameter
-                #phi = F.softplus(mmp)
-                #S = phi / torch.sum(phi)
+                mmp = 1000 * model.module.phi
+                phi = F.softplus(mmp)
 
-
-                S = model.module.phi / torch.sum(model.module.phi)
-
-                # BAD
-                # mmp = 1000 * model.module.phi
-                # phi = F.softplus(mmp)
-                # S = phi / torch.sum(phi)
-
+                S = phi / torch.sum(phi)
                 #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
 
             if args.instancewise:
+
                 global Ss
                 if "Ss" not in globals():
                     Ss = []
@@ -365,10 +359,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 print(switches_2d_sort[-10:])
 
                 ##### saving global ranks
-                # note: local ones we save during the test below
                 global_ranks_path = lambda \
                     ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
-                # removing previous checkpoint
                 global old_i
                 if ("old_i" in globals()):
                     print("old_i")
@@ -427,7 +419,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
                     tim = time.time()
                     lala = ma2.save(f"switches_photos/squares/squares_{tim}.jpg")
-                    print("image saving")
+                    print("saving")
             elif args.type_feature == "lines":
                 print_square_num = 20
                 r=1
@@ -450,9 +442,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 tim = time.time()
                 lala = ma2.save(f"switches_photos/lines/lines_{tim}.jpg")
                 print("saving")
-        # end drawing
 
-        # saving trained model both for local and global
         every = args.every
         if i % every ==0:
 
@@ -472,21 +462,14 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     'optimizer': optimizer.state_dict(),
                     'args': args,
                 }, is_best, epoch, logger.output_directory, args.type_feature, i, every, qnet=True)
-    # end for i in batch loader
 
-    # get the instancewise ranks for forward passes for each of the test images
-    # note: this step only for local, for global we get them during training
     if args.evaluate and args.instancewise:
         #filename = os.path.split(args.evaluate)[1]
         Ss_numpy = np.array(Ss)
-        print(Ss_numpy)
         folder_and_name = args.evaluate.split(os.sep)[-3:]
-        ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
-        #os.makedirs(f"ranks/{args.type_feature}/instance/", exist_ok=True)
-        os.makedirs(ranks_save_dir, exist_ok=True)
-        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}.npy"), Ss)
-        print(f"Saved instance ranks to: {ranks_save_dir}")
-
+        os.makedirs(f"ranks/instance/{folder_and_name[0]}", exist_ok=True)
+        os.makedirs(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}", exist_ok=True)
+        np.save(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/Ss_val_{folder_and_name[2]}.npy", Ss)
 
     return avg, is_best
 
@@ -537,19 +520,10 @@ def main():
         else:
             model = DepthCompletionNetQSquare(args).to(device)
     elif args.type_feature == "lines":
-        if args.instancewise:
-            model = DepthCompletionNetQLinesNet(args).to(device)
-        else:
-            model = DepthCompletionNetQ(args).to(device)
-
-
-
+        model = DepthCompletionNetQ(args).to(device)
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]
-
-
-
     optimizer = torch.optim.Adam(model_named_params,
                                  lr=args.lr,
                                  weight_decay=args.weight_decay)

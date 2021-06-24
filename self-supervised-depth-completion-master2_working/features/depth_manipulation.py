@@ -61,43 +61,48 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     ver = np.floor(A_2d_argsort // A.shape[1])
     hor = A_2d_argsort % A.shape[1]
 
+    TOP_SELECTED = 200
+
     coord_sorted = np.stack([ver, hor]).transpose()
     print("Squares by the most points")
 
-    print(coord_sorted[-10:])
-    print(A_2d_argsort[-10:])
-    print("num of points: ", A_2d_sort[-10:])
+    print(coord_sorted[-TOP_SELECTED:])
+    print(A_2d_argsort[-TOP_SELECTED:])
+    print("num of points: ", A_2d_sort[-TOP_SELECTED:])
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
     sq_mode = "switch_local"
     print(sq_mode)
+
     if sq_mode == "random":
         #np.random.seed(16)
-        squares = np.random.choice(square_num, 10)
+        squares = np.random.choice(square_num, TOP_SELECTED)
     elif sq_mode == "most":
-        squares = np.array([int(a) for a in A_2d_argsort[-10:]])
+        squares = np.array([int(a) for a in A_2d_argsort[-TOP_SELECTED:]])
     elif sq_mode == "switch":
-        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")[-10:]
-        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_205.npy")[-10:]
-    elif sq_mode =="switch_local":
-        #name = "checkpoint_qnet-0_i_1100_typefeature_sq.pth.tar"
-        name = "checkpoint_qnet-0_i_17000_typefeature_sq.pth_lr=0.0001.bs=1.wd=0.0.tar"
         name = folder_and_name[1]
-        if not os.path.isfile(f"ranks/instance/Ss_val_argsort_{name}.npy"):
-            sq = np.load(f"ranks/instance/{folder_and_name[0]}/Ss_val_{name}.npy")
+        #squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")
+        #square_switches = np.load("ranks/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_120.npy")
+        #square_argsort = np.argsort(square_switches, None)
+        square_argsort = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_iter_100.npy")
+        squares = square_argsort[-TOP_SELECTED:]
+    elif sq_mode =="switch_local":
+        name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
+        name = folder_and_name[2]
+        # argsort the switches
+        if not os.path.isfile(f"ranks/instance/argsort_{name}.npy"):
+            sq = np.load(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/{name}")
             sq_argsort_local=[]
             for i in range(sq.shape[0]):
                 sq_argsort_local.append(np.argsort(sq[i], None))
             sq_argsort_local = np.array(sq_argsort_local)
-            np.save(f"ranks/instance/{folder_and_name[0]}/Ss_val_argsort_{name}.npy", sq_argsort_local)
-        squares_local = np.load(f"ranks/instance/{folder_and_name[0]}/Ss_val_argsort_{name}.npy")
-        squares = squares_local[iter, -10:]
+            np.save(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/argsort_{name}.npy", sq_argsort_local)
+        squares_local = np.load(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/argsort_{name}.npy")
+        squares = squares_local[iter, -TOP_SELECTED:]
 
-
-
-    print(f"Squares used {sq_mode}: ", squares)
+    print(f"\nSquares used {sq_mode}: ", squares)
 
     # draw the selected squares
     # if "ii" not in globals():
@@ -129,11 +134,13 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
         #depth = np.random.normal(10, 5, (depth.shape[0], depth.shape[1])) #RMSE=21186.322, MAE=19962.695
         depth =np.zeros_like(depth)
 
-    points_wanted_num = 50
-    points_choice = "random"
-    print(f"adjust: {adjust}, points_wanted_num: {points_wanted_num}, points_choice: {points_choice}")
 
     if adjust:
+
+        points_wanted_num = 50
+        points_choice = "random"
+        print(f"adjust: {adjust}, points_wanted_num: {points_wanted_num}, points_choice: {points_choice}")
+
         depth_new = np.zeros_like(depth)
         # find the set of points for each bin
         max_bin = 400 #max(bins_2d_depth.binnumber)
@@ -202,16 +209,17 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     return depth
 
 
-def depth_adjustment_lines(depth):
+def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
 
     depth = depth.detach().cpu().numpy().squeeze()
-    masks = np.load("kitti_pixels_to_lines_masks.npy")
+    masks = np.load("features/kitti_pixels_to_lines_masks.npy")
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
+    TOP_SELECTED = 10
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "switch"
+    lines_mode = "switch_local"
     if lines_mode == "random":
         np.random.seed(15)
         lines = np.random.choice(lines_num, 10)
@@ -221,9 +229,34 @@ def depth_adjustment_lines(depth):
         lines_ptsargsort = np.argsort(lines_pts)
         lines = lines_ptsargsort[-10:]
     elif lines_mode == "switch":
-        lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1230.npy")
+        ranks_file = f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_6640_kittidepthcurr_noadjust_sparse_bin.npy"
+        #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1230.npy")
+        lines = np.load(ranks_file)
+        #print(f"Loaded ranks from {ranks_file}")
+        lines = np.argsort(lines)
         lines = lines[ lines != 0]
         lines = lines[-10:]
+
+    elif lines_mode =="switch_local":
+        name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
+        name = folder_and_name[2]
+        # argsort the switches
+        ranks_file = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-06-23@12-44/Ss_val_checkpoint_qnet-0_i_2820_typefeature_lines.pth.tar.npy"
+        ranks_path = os.path.split(ranks_file)[0]
+        ranks_filename = os.path.split(ranks_file)[1]
+        ranks_filename_core = os.path.splitext(ranks_filename)[0]
+        ranks_file_argsort = os.path.join(ranks_path, ranks_filename_core + "argsort.npy" )
+        if not os.path.isfile(ranks_file_argsort):
+            sq = np.load(ranks_file)
+            lines_argsort_local = []
+            for i in range(sq.shape[0]):
+                lines_argsort_local.append(np.argsort(sq[i], None))
+            lines_argsort_local = np.array(lines_argsort_local)
+            np.save(ranks_file_argsort, lines_argsort_local)
+        lines_local = np.load(ranks_file_argsort)
+        #squares_local = np.load(f"ranks/{folder_and_name[0]}/instance/{folder_and_name[1]}/argsort_{name}.npy")
+        lines = lines_local[iter, -TOP_SELECTED:]
+
     print(f"Lines used {lines_mode}: ", lines)
 
     if select_mask:
