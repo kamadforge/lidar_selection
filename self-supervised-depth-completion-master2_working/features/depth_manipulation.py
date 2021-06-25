@@ -61,7 +61,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     ver = np.floor(A_2d_argsort // A.shape[1])
     hor = A_2d_argsort % A.shape[1]
 
-    TOP_SELECTED = 200
+    TOP_SELECTED = 10
 
     coord_sorted = np.stack([ver, hor]).transpose()
     print("Squares by the most points")
@@ -73,7 +73,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "switch_local"
+    sq_mode = "most"
     print(sq_mode)
 
     if sq_mode == "random":
@@ -85,8 +85,9 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
         name = folder_and_name[1]
         #squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")
         #square_switches = np.load("ranks/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_120.npy")
-        #square_argsort = np.argsort(square_switches, None)
-        square_argsort = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_iter_100.npy")
+
+        square_switches = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/sq/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_500.npy")
+        square_argsort = np.argsort(square_switches, None)
         squares = square_argsort[-TOP_SELECTED:]
     elif sq_mode =="switch_local":
         name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"

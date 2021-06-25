@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from dataloaders.kitti_loader_new import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
 from metrics import AverageMeter, Result
 import criteria
@@ -26,6 +26,7 @@ import numpy as np
 import sys
 print(sys.version)
 
+#arguments
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
@@ -122,17 +123,26 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='bin')
-parser.add_argument('--instancewise', default=1)
+parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
 args = parser.parse_args()
 
+if args.instancewise:
+    bif_mode = "local"
+else:
+    bif_mode = "global"
 
-if args.evaluate == "1":
+
+if args.evaluate == "0":
+    args.evaluate = "sa"
+
+elif args.evaluate == "1":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+
 
 if args.resume == "1":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
@@ -141,7 +151,7 @@ elif args.resume == "2":
 
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
-args.result = os.path.join('..', f'results/qnet/{os.path.split(args.resume)[1]}')
+args.result = os.path.join('..', f'results/{args.type_feature}/{bif_mode}/{os.path.split(args.resume)[1]}')
 os.makedirs(args.result, exist_ok=True)
 args.use_rgb = ('rgb' in args.input) or args.use_pose
 args.use_d = 'd' in args.input
@@ -152,6 +162,7 @@ else:
     args.w1, args.w2 = 0, 0
 print(args)
 
+# cuda computation
 cuda = torch.cuda.is_available() and not args.cpu
 if cuda:
     import torch.backends.cudnn as cudnn
@@ -161,12 +172,7 @@ else:
     device = torch.device("cpu")
 print("=> using '{}' for computation.".format(device))
 
-# define loss functions
-depth_criterion = criteria.MaskedMSELoss() if (
-    args.criterion == 'l2') else criteria.MaskedL1Loss()
-photometric_criterion = criteria.PhotometricLoss()
-smoothness_criterion = criteria.SmoothnessLoss()
-
+#camera settings
 if args.use_pose:
     # hard-coded KITTI camera intrinsics
     K = load_calib()
@@ -175,6 +181,13 @@ if args.use_pose:
     kitti_intrinsics = Intrinsics(owidth, oheight, fu, fv, cu, cv)
     if cuda:
         kitti_intrinsics = kitti_intrinsics.cuda()
+
+# define loss functions
+depth_criterion = criteria.MaskedMSELoss() if (
+    args.criterion == 'l2') else criteria.MaskedL1Loss()
+photometric_criterion = criteria.PhotometricLoss()
+smoothness_criterion = criteria.SmoothnessLoss()
+
 
 # keep the original model parameters and not update them
 def zero_params(model):
@@ -379,7 +392,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
                 np.save(global_ranks_path(i), S_numpy)
                 old_i = i
-                print("saving ranks")
+                print(f"saving ranks to {global_ranks_path(i)}")
 
                 if args.type_feature == "sq":
 
@@ -609,7 +622,7 @@ def main():
     # main loop
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
-        print("\n\n=> starting training epoch {} .. \n\n".format(epoch))
+        print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
         iterate("train", args, train_loader, model, optimizer, logger,epoch)  # train for one epoch
         result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
         helper.save_checkpoint({ # save checkpoint
