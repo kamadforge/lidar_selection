@@ -11,7 +11,7 @@ import torch.nn.parallel
 import torch.optim
 import torch.utils.data
 
-from dataloaders.kitti_loader_curr import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNet
 from metrics import AverageMeter, Result
 import criteria
@@ -123,7 +123,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
 
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 #parser.add_argument('--ranks_file', nargs="+", default=["la", "la"])
@@ -328,9 +328,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     for i, batch_data in enumerate(loader):
 
-        name = batch_data['name'][0]
-        print(name)
-        del batch_data['name']
+        # name = batch_data['name'][0]
+        # print(name)
+        # del batch_data['name']
         print ("i: ", i)
         start = time.time()
         batch_data = {

@@ -83,10 +83,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
         squares = np.array([int(a) for a in A_2d_argsort[-TOP_SELECTED:]])
     elif sq_mode == "switch":
         name = folder_and_name[1]
-        #squares = np.load(f"ranks/switches_argsort_2D_equal_iter_8560.npy")
-        #square_switches = np.load("ranks/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_120.npy")
-
-        square_switches = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/sq/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_500.npy")
+        square_switches = np.load(f"ranks/sq/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_4280.npy")
         square_argsort = np.argsort(square_switches, None)
         squares = square_argsort[-TOP_SELECTED:]
     elif sq_mode =="switch_local":
@@ -220,7 +217,7 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
     TOP_SELECTED = 10
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "switch_local"
+    lines_mode = "switch"
     if lines_mode == "random":
         np.random.seed(15)
         lines = np.random.choice(lines_num, 10)
@@ -230,7 +227,7 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
         lines_ptsargsort = np.argsort(lines_pts)
         lines = lines_ptsargsort[-10:]
     elif lines_mode == "switch":
-        ranks_file = f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_6640_kittidepthcurr_noadjust_sparse_bin.npy"
+        ranks_file = f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_lines_2D_equal_iter_590.npy"
         #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1230.npy")
         lines = np.load(ranks_file)
         #print(f"Loaded ranks from {ranks_file}")

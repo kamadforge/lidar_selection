@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
 from metrics import AverageMeter, Result
 import criteria
@@ -123,8 +123,8 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--sparse_depth_source', default='bin')
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
+parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
 args = parser.parse_args()
@@ -340,17 +340,21 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             torch.set_printoptions(precision=7, sci_mode=False)
 
             if model.module.phi is not None:
-                #mmp = 1000 * model.module.parameter
-                #phi = F.softplus(mmp)
-                #S = phi / torch.sum(phi)
+
+                mmp = 1000 * model.module.parameter #DIFF
+                phi = F.softplus(mmp)
+                S = phi / torch.sum(phi)
+                # print(S, '*********')
 
 
-                S = model.module.phi / torch.sum(model.module.phi)
 
                 # BAD
-                # mmp = 1000 * model.module.phi
-                # phi = F.softplus(mmp)
-                # S = phi / torch.sum(phi)
+                # S = model.module.phi / torch.sum(model.module.phi)
+                #
+                # # BAD
+                # # mmp = 1000 * model.module.phi
+                # # phi = F.softplus(mmp)
+                # # S = phi / torch.sum(phi)
 
                 #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
