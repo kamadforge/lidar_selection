@@ -6,8 +6,9 @@ print(sys.version)
 
 for lr in [0.0001, 1e-5]:
     for wd in [0.0, 0.1, 0.01]:
-        for iter in [50000, 85500]:
-            for ep in [0,1,2,3,4]:
+        for ep in [0,1,2,3,4]:
+            for iter in [50000, 70000, 85500]:
+            
 
                 print(f"\nlr: {lr} and wd: {wd} ep: {ep} iter: {iter}\n")
 

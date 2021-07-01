@@ -125,8 +125,9 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=0)
+parser.add_argument('--instancewise', default=1)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
+parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
 
 if args.instancewise:
@@ -347,7 +348,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 # print(S, '*********')
 
 
-
                 # BAD
                 # S = model.module.phi / torch.sum(model.module.phi)
                 #
@@ -481,7 +481,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            if mode != "val":
+            if mode != "val" and args.save_checkpoint_bool:
                 helper.save_checkpoint({  # save checkpoint
                     'epoch': epoch,
                     'model': model.module.state_dict(),
