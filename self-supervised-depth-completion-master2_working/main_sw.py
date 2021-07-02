@@ -125,7 +125,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=1)
+parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
@@ -368,9 +368,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     Ss.append(S_numpy)
 
             # GLOBAL
+            print(args.every)
+            print(args.evaluate)
+            print(args.instancewise)
+            print(model.module.phi)
             if (i % args.every ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
 
-                np.set_printoptions(precision=4)
+                np.set_printoptions(precision=5)
 
                 switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
                 switches_2d_sort = np.sort(S_numpy, None)
