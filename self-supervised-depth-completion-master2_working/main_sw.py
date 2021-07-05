@@ -123,9 +123,9 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=1)
+parser.add_argument('--instancewise', default=0)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=1)
 args = parser.parse_args()
@@ -340,7 +340,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
         # local test or global training
         if (i % 1 == 0 and mode=="val" and args.instancewise) or\
-                (i % args.every == 0 and mode=="train" and not args.instancewise):                     #    print(model.module.conv4[5].conv1.weight[0])
+                ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise):                     #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             #print("*************swiches:")
@@ -375,7 +375,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                     Ss.append(S_numpy)
 
             # GLOBAL training
-            if (i_total % args.every ==0  and mode=="train" and not args.instancewise and model.module.phi is not None):
+            if ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise and model.module.phi is not None):
 
                 np.set_printoptions(precision=5)
 
@@ -392,6 +392,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 # note: local ones we save during the test below
                 global_ranks_path = lambda \
                     ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
+
+                folder_and_name = args.resume.split(os.sep)[-2:]
                 # removing previous checkpoint
                 global old_i
                 if ("old_i" in globals()):
@@ -399,7 +401,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                     if os.path.isfile(global_ranks_path(old_i)):
                         os.remove(global_ranks_path(old_i))
 
-                folder_and_name = args.resume.split(os.sep)[-2:]
+
                 os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
                 np.save(global_ranks_path(i), S_numpy)
                 old_i = i_total
@@ -677,8 +679,8 @@ def main():
             print("subdataloader: ", split_it)
             is_eval = False
             iterate("train", args, subdatloader, model, optimizer, logger,epoch, splits_total, split_it)  # train for one epoch
-            is_eval = True
-            result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
+            if args.instancewise:
+                result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
         helper.save_checkpoint({ # save checkpoint
             'epoch': epoch,
             'model': model.module.state_dict(),
