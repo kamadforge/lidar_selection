@@ -127,7 +127,7 @@ parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--instancewise', default=0, type=int)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
-parser.add_argument('--save_checkpoint_bool', default=0)
+parser.add_argument('--save_checkpoint_bool', default=1)
 args = parser.parse_args()
 
 if args.instancewise:
@@ -161,6 +161,7 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
+args.save_checkpoint_path = ""
 print(args)
 
 # cuda computation
@@ -218,7 +219,7 @@ def zero_params(model):
         #     param.data[combinationss[it - 1]] = 0
 
 
-def iterate(mode, args, loader, model, optimizer, logger, epoch):
+def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100, split_it=0):
     block_average_meter = AverageMeter()
     average_meter = AverageMeter()
     meters = [block_average_meter, average_meter]
@@ -239,7 +240,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # name = batch_data['name'][0]
         # print(name)
         # del batch_data['name']
-        print("i: ", i)
+        if mode == 'train':
+            i_total = len(loader)*split_it+i
+            print("split: ", split_it)
+        else:
+            i_total = i
+        print(f"{mode} i :  {i_total}")
+
         # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()
         batch_data = {
@@ -330,14 +337,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # counting pixels in each bin
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
-        print(args.every)
-        print(not args.evaluate)
-        print(not args.instancewise)
-        print(model.module.phi)
-        # local training
-        if (i % 1 == 0 and args.evaluate and args.instancewise) or\
-                (i % args.every == 0 and not args.evaluate and not args.instancewise): # global training
-            #    print(model.module.conv4[5].conv1.weight[0])
+
+        # local test or global training
+        if (i % 1 == 0 and mode=="val" and args.instancewise) or\
+                ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise):                     #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             print("*************swiches:")
@@ -362,6 +365,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
 
+            # Local test
             if args.instancewise:
                 global Ss
                 if "Ss" not in globals():
@@ -370,9 +374,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     Ss.append(S_numpy)
 
-            # GLOBAL
-            
-            if (i % args.every ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
+
+            # GLOBAL training
+            if ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise and model.module.phi is not None):
 
                 np.set_printoptions(precision=5)
 
@@ -389,6 +393,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 # note: local ones we save during the test below
                 global_ranks_path = lambda \
                     ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
+
+                folder_and_name = args.resume.split(os.sep)[-2:]
                 # removing previous checkpoint
                 global old_i
                 if ("old_i" in globals()):
@@ -396,10 +402,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     if os.path.isfile(global_ranks_path(old_i)):
                         os.remove(global_ranks_path(old_i))
 
-                folder_and_name = args.resume.split(os.sep)[-2:]
+
                 os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
                 np.save(global_ranks_path(i), S_numpy)
-                old_i = i
+                old_i = i_total
                 print(f"saving ranks to {global_ranks_path(i)}")
 
                 if args.type_feature == "sq":
@@ -473,11 +479,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 print("saving")
         # end drawing
 
-        # saving trained model both for local and global
+        # saving training model both for local and global
         every = args.every
-        if i % every ==0:
+        if i_total % every ==0 or i ==len(loader)-1 :
 
-            print("saving")
+
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             #is_best = True #saving all the checkpoints
@@ -485,29 +491,38 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            if mode != "val" and args.save_checkpoint_bool:
-                helper.save_checkpoint({  # save checkpoint
-                    'epoch': epoch,
-                    'model': model.module.state_dict(),
-                    'best_result': logger.best_result,
-                    'optimizer': optimizer.state_dict(),
-                    'args': args,
-                }, is_best, epoch, logger.output_directory, args.type_feature, i, every, qnet=True)
+            if mode == "train":
+
+                print("saving checkpoint at ", i_total)
+
+                if mode != "val" and args.save_checkpoint_bool:
+                    global save_checkpoint_path
+                    args.save_checkpoint_path = helper.save_checkpoint({  # save checkpoint
+                        'epoch': epoch,
+                        'model': model.module.state_dict(),
+                        'best_result': logger.best_result,
+                        'optimizer': optimizer.state_dict(),
+                        'args': args,
+                    }, is_best, epoch, logger.output_directory, args.type_feature, i_total, every, qnet=True)
     # end for i in batch loader
 
     # get the instancewise ranks for forward passes for each of the test images
     # note: this step only for local, for global we get them during training
-    if args.evaluate and args.instancewise:
+    if mode=="val" and args.instancewise:
         #filename = os.path.split(args.evaluate)[1]
         Ss_numpy = np.array(Ss)
-        print(Ss_numpy)
-        folder_and_name = args.evaluate.split(os.sep)[-3:]
+        #print(Ss_numpy)
+        if mode=="val":
+            if args.evaluate:
+                folder_and_name = args.evaluate.split(os.sep)[-3:]
+            else:
+                folder_and_name = args.save_checkpoint_path.split(os.sep)[-3:]
+                print("save checkpoint path", args.save_checkpoint_path)
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
         #os.makedirs(f"ranks/{args.type_feature}/instance/", exist_ok=True)
         os.makedirs(ranks_save_dir, exist_ok=True)
-        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}.npy"), Ss)
+        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}_ep_{epoch}_it_{i_total}.npy"), Ss)
         print(f"Saved instance ranks to: {ranks_save_dir}")
-
 
     return avg, is_best
 
@@ -582,6 +597,33 @@ def main():
     model = torch.nn.DataParallel(model)
 
     # Data loading code
+    def split_dataset(dataset, num):
+        subloaders = []
+        dataset_let = len(dataset)
+
+        chunk = len(dataset)// num
+        chunk_remainder = len(dataset) % num
+
+        for i in range(num):
+            if i < num:
+                dataset_sub = torch.utils.data.Subset(dataset, torch.arange(i*chunk, (i+1)*chunk))
+            elif i ==num:
+                dataset_sub = torch.utils.data.Subset(dataset, torch.arange((num - 1) * chunk, dataset_let))
+
+            sub_train_loader = torch.utils.data.DataLoader(dataset_sub,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=args.workers,
+                                                       pin_memory=True,
+                                                       sampler=None)
+
+            subloaders.append(sub_train_loader)
+
+
+
+        return subloaders
+
+
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
@@ -600,7 +642,7 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(5)) #1000
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
@@ -608,6 +650,8 @@ def main():
         num_workers=0,
         pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
+
+
 
     # create backups and results folder
     logger = helper.logger(args)
@@ -631,8 +675,13 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        iterate("train", args, train_loader, model, optimizer, logger,epoch)  # train for one epoch
-        result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
+        splits_total=10000
+        for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
+            print("subdataloader: ", split_it)
+            is_eval = False
+            iterate("train", args, subdatloader, model, optimizer, logger,epoch, splits_total, split_it)  # train for one epoch
+            if args.instancewise:
+                result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
         helper.save_checkpoint({ # save checkpoint
             'epoch': epoch,
             'model': model.module.state_dict(),
@@ -642,5 +691,7 @@ def main():
         }, is_best, epoch, logger.output_directory, args.type_feature)
 
 
+
 if __name__ == '__main__':
+
     main()

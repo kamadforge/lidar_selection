@@ -243,6 +243,8 @@ def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, 
         if os.path.exists(prev_checkpoint_filename) and ((i-every) % 20000 != 0):
             os.remove(prev_checkpoint_filename)
 
+    return checkpoint_filename
+
 
 def get_folder_name(args):
     current_time = time.strftime('%Y-%m-%d@%H-%M')
