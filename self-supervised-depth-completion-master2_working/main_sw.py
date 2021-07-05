@@ -125,7 +125,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=0)
+parser.add_argument('--instancewise', default=0, type=int)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
@@ -136,10 +136,10 @@ else:
     bif_mode = "global"
 
 
-if args.evaluate == "0":
-    args.evaluate = "sa"
+#if args.evaluate == "0":
+#    args.evaluate = "sa"
 
-elif args.evaluate == "1":
+if args.evaluate == "1":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
@@ -330,14 +330,17 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # counting pixels in each bin
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
-
+        print(args.every)
+        print(not args.evaluate)
+        print(not args.instancewise)
+        print(model.module.phi)
         # local training
         if (i % 1 == 0 and args.evaluate and args.instancewise) or\
                 (i % args.every == 0 and not args.evaluate and not args.instancewise): # global training
             #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
-            #print("*************swiches:")
+            print("*************swiches:")
             torch.set_printoptions(precision=7, sci_mode=False)
 
             if model.module.phi is not None:
@@ -368,10 +371,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     Ss.append(S_numpy)
 
             # GLOBAL
-            print(args.every)
-            print(args.evaluate)
-            print(args.instancewise)
-            print(model.module.phi)
+            
             if (i % args.every ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
 
                 np.set_printoptions(precision=5)

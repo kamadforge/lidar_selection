@@ -1385,7 +1385,7 @@ class DepthCompletionNetQLinesNet(nn.Module):
         # switch mask
         S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])
         #print(S_mask_ext[24][308][733])
-        print(f"S: {S}")
+        #print(f"S: {S}")
         S_mask = torch.max(S_mask_ext, 0)[0]
 
         # for i in range(len(self.parameter)):
