@@ -123,11 +123,11 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--instancewise', default=1)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
-parser.add_argument('--save_checkpoint_bool', default=0)
+parser.add_argument('--save_checkpoint_bool', default=1)
 args = parser.parse_args()
 
 if args.instancewise:
@@ -161,6 +161,7 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
+args.save_checkpoint_path = ""
 print(args)
 
 # cuda computation
@@ -241,7 +242,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         # del batch_data['name']
         if mode == 'train':
             i_total = len(loader)*split_it+i
-            print("split: ", splits_num)
+            print("split: ", split_it)
         else:
             i_total = i
         print(f"{mode} i :  {i_total}")
@@ -337,10 +338,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
 
-        # local training
-        if (i % 1 == 0 and args.evaluate and args.instancewise) or\
-                (i % args.every == 0 and not args.evaluate and not args.instancewise): # global training
-            #    print(model.module.conv4[5].conv1.weight[0])
+        # local test or global training
+        if (i % 1 == 0 and mode=="val" and args.instancewise) or\
+                (i % args.every == 0 and mode=="train" and not args.instancewise):                     #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
             #print("*************swiches:")
@@ -365,6 +365,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
 
+            # Local test
             if args.instancewise:
                 global Ss
                 if "Ss" not in globals():
@@ -373,8 +374,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 else:
                     Ss.append(S_numpy)
 
-            # GLOBAL
-            if (i % args.every ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
+            # GLOBAL training
+            if (i_total % args.every ==0  and mode=="train" and not args.instancewise and model.module.phi is not None):
 
                 np.set_printoptions(precision=5)
 
@@ -401,7 +402,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 folder_and_name = args.resume.split(os.sep)[-2:]
                 os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
                 np.save(global_ranks_path(i), S_numpy)
-                old_i = i
+                old_i = i_total
                 print(f"saving ranks to {global_ranks_path(i)}")
 
                 if args.type_feature == "sq":
@@ -475,11 +476,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 print("saving")
         # end drawing
 
-        # saving trained model both for local and global
+        # saving training model both for local and global
         every = args.every
-        if i % every ==0:
+        if i_total % every ==0 or i ==len(loader)-1 :
 
-            print("saving")
+
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             #is_best = True #saving all the checkpoints
@@ -487,23 +488,33 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            if mode != "val" and args.save_checkpoint_bool:
-                helper.save_checkpoint({  # save checkpoint
-                    'epoch': epoch,
-                    'model': model.module.state_dict(),
-                    'best_result': logger.best_result,
-                    'optimizer': optimizer.state_dict(),
-                    'args': args,
-                }, is_best, epoch, logger.output_directory, args.type_feature, i, every, qnet=True)
+            if mode == "train":
+
+                print("saving checkpoint at ", i_total)
+
+                if mode != "val" and args.save_checkpoint_bool:
+                    global save_checkpoint_path
+                    args.save_checkpoint_path = helper.save_checkpoint({  # save checkpoint
+                        'epoch': epoch,
+                        'model': model.module.state_dict(),
+                        'best_result': logger.best_result,
+                        'optimizer': optimizer.state_dict(),
+                        'args': args,
+                    }, is_best, epoch, logger.output_directory, args.type_feature, i_total, every, qnet=True)
     # end for i in batch loader
 
     # get the instancewise ranks for forward passes for each of the test images
     # note: this step only for local, for global we get them during training
-    if args.evaluate and args.instancewise:
+    if mode=="val" and args.instancewise:
         #filename = os.path.split(args.evaluate)[1]
         Ss_numpy = np.array(Ss)
-        print(Ss_numpy)
-        folder_and_name = args.evaluate.split(os.sep)[-3:]
+        #print(Ss_numpy)
+        if mode=="val":
+            if args.evaluate:
+                folder_and_name = args.evaluate.split(os.sep)[-3:]
+            else:
+                folder_and_name = args.save_checkpoint_path.split(os.sep)[-3:]
+                print("save checkpoint path", args.save_checkpoint_path)
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
         #os.makedirs(f"ranks/{args.type_feature}/instance/", exist_ok=True)
         os.makedirs(ranks_save_dir, exist_ok=True)
