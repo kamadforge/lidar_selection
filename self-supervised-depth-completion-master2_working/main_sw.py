@@ -125,7 +125,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=0)
+parser.add_argument('--instancewise', default=1)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
@@ -218,7 +218,7 @@ def zero_params(model):
         #     param.data[combinationss[it - 1]] = 0
 
 
-def iterate(mode, args, loader, model, optimizer, logger, epoch):
+def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100, split_it=0):
     block_average_meter = AverageMeter()
     average_meter = AverageMeter()
     meters = [block_average_meter, average_meter]
@@ -239,7 +239,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # name = batch_data['name'][0]
         # print(name)
         # del batch_data['name']
-        print("i: ", i)
+        if mode == 'train':
+            i_total = len(loader)*split_it+i
+            print("split: ", splits_num)
+        else:
+            i_total = i
+        print(f"{mode} i :  {i_total}")
+
         # each batch data is 1 and has three keys d, gt, g and dim [1, 352, 1216]
         start = time.time()
         batch_data = {
@@ -368,10 +374,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     Ss.append(S_numpy)
 
             # GLOBAL
-            print(args.every)
-            print(args.evaluate)
-            print(args.instancewise)
-            print(model.module.phi)
             if (i % args.every ==0  and not args.evaluate and not args.instancewise and model.module.phi is not None):
 
                 np.set_printoptions(precision=5)
@@ -505,9 +507,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
         #os.makedirs(f"ranks/{args.type_feature}/instance/", exist_ok=True)
         os.makedirs(ranks_save_dir, exist_ok=True)
-        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}.npy"), Ss)
+        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}_ep_{epoch}_it_{i_total}.npy"), Ss)
         print(f"Saved instance ranks to: {ranks_save_dir}")
-
 
     return avg, is_best
 
@@ -582,6 +583,33 @@ def main():
     model = torch.nn.DataParallel(model)
 
     # Data loading code
+    def split_dataset(dataset, num):
+        subloaders = []
+        dataset_let = len(dataset)
+
+        chunk = len(dataset)// num
+        chunk_remainder = len(dataset) % num
+
+        for i in range(num):
+            if i < num:
+                dataset_sub = torch.utils.data.Subset(dataset, torch.arange(i*chunk, (i+1)*chunk))
+            elif i ==num:
+                dataset_sub = torch.utils.data.Subset(dataset, torch.arange((num - 1) * chunk, dataset_let))
+
+            sub_train_loader = torch.utils.data.DataLoader(dataset_sub,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=args.workers,
+                                                       pin_memory=True,
+                                                       sampler=None)
+
+            subloaders.append(sub_train_loader)
+
+
+
+        return subloaders
+
+
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
@@ -600,7 +628,7 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(5)) #1000
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
@@ -608,6 +636,8 @@ def main():
         num_workers=0,
         pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
+
+
 
     # create backups and results folder
     logger = helper.logger(args)
@@ -631,8 +661,13 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        iterate("train", args, train_loader, model, optimizer, logger,epoch)  # train for one epoch
-        result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
+        splits_total=10000
+        for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
+            print("subdataloader: ", split_it)
+            is_eval = False
+            iterate("train", args, subdatloader, model, optimizer, logger,epoch, splits_total, split_it)  # train for one epoch
+            is_eval = True
+            result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
         helper.save_checkpoint({ # save checkpoint
             'epoch': epoch,
             'model': model.module.state_dict(),
@@ -642,5 +677,7 @@ def main():
         }, is_best, epoch, logger.output_directory, args.type_feature)
 
 
+
 if __name__ == '__main__':
+
     main()
