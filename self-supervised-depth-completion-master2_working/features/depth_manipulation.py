@@ -73,7 +73,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "most"
+    sq_mode = "switch_local"
     print(sq_mode)
 
     if sq_mode == "random":
@@ -83,21 +83,23 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
         squares = np.array([int(a) for a in A_2d_argsort[-TOP_SELECTED:]])
     elif sq_mode == "switch":
         name = folder_and_name[1]
-        square_switches = np.load(f"ranks/sq/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/Ss_val_checkpoint--1_i_16600_typefeature_None.pth.tar_iter_4280.npy")
+        square_switches = np.load(f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/sq/global/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_571.npy")
         square_argsort = np.argsort(square_switches, None)
         squares = square_argsort[-TOP_SELECTED:]
     elif sq_mode =="switch_local":
-        name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
+        name_full = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/sq/local/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-07-06@12-37/checkpoint_qnet-0_i_3080_typefeature_sq.pth.tar"
+        folder_and_name = name_full.split(os.sep)[-3:]
         name = folder_and_name[2]
         # argsort the switches
-        if not os.path.isfile(f"ranks/instance/argsort_{name}.npy"):
-            sq = np.load(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/{name}")
+        argsort_name = f"ranks/sq/instance/{folder_and_name[0]}/{folder_and_name[1]}/argsort_{name}"
+        if not os.path.isfile(argsort_name):
+            sq = np.load(name_full)
             sq_argsort_local=[]
             for i in range(sq.shape[0]):
                 sq_argsort_local.append(np.argsort(sq[i], None))
             sq_argsort_local = np.array(sq_argsort_local)
-            np.save(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/argsort_{name}.npy", sq_argsort_local)
-        squares_local = np.load(f"ranks/instance/{folder_and_name[0]}/{folder_and_name[1]}/argsort_{name}.npy")
+            np.save(argsort_name, sq_argsort_local)
+        squares_local = np.load(argsort_name)
         squares = squares_local[iter, -TOP_SELECTED:]
 
     print(f"\nSquares used {sq_mode}: ", squares)
