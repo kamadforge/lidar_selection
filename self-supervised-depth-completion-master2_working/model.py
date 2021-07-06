@@ -1088,6 +1088,7 @@ class DepthCompletionNetQSquareNet(nn.Module):
         S = self.phi / torch.sum(self.phi)
         #print("phi from model", self.phi[1, -10:])
         #print("S from model", S[1, -10:])
+        #print(S)
 
 
         #print("S argsor: ", np.argsort(S.detach().cpu().numpy(), None)[-10:])

@@ -348,19 +348,21 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
             if model.module.phi is not None:
 
-                mmp = 1000 * model.module.parameter #DIFF
-                phi = F.softplus(mmp)
-                S = phi / torch.sum(phi)
-                # print(S, '*********')
+                # mmp = 1000 * model.module.parameter #DIFF
+                # phi = F.softplus(mmp)
+                # S = phi / torch.sum(phi)
 
 
-                # BAD
-                # S = model.module.phi / torch.sum(model.module.phi)
+
+                # BAD (maybe not)
+                S = model.module.phi / torch.sum(model.module.phi)
                 #
                 # # BAD
                 # # mmp = 1000 * model.module.phi
                 # # phi = F.softplus(mmp)
                 # # S = phi / torch.sum(phi)
+
+                print(S, '*********')
 
                 #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
