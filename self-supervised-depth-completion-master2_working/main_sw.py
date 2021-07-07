@@ -123,11 +123,11 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=0, type=int)
-parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
-parser.add_argument('--save_checkpoint_bool', default=1)
+parser.add_argument('--instancewise', default=1, type=int)
+parser.add_argument('--every', default=200, type=int) #saving checkpoint every k images
+parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
 
 if args.instancewise:
@@ -338,87 +338,85 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         #binned_pixels = np.load("value.npy", allow_pickle=True)
         #print(len(binned_pixels))
 
-        # local test or global training
-        if (i % 1 == 0 and mode=="val" and args.instancewise) or\
-                ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise):                     #    print(model.module.conv4[5].conv1.weight[0])
+        torch.set_printoptions(precision=7, sci_mode=False)
+
+        if model.module.phi is not None:
+            # mmp = 1000 * model.module.parameter #DIFF
+            # phi = F.softplus(mmp)
+            # S = phi / torch.sum(phi)
+            # BAD (maybe not)
+            S = model.module.phi / torch.sum(model.module.phi)
+            # # BAD
+            # # mmp = 1000 * model.module.phi
+            # # phi = F.softplus(mmp)
+            # # S = phi / torch.sum(phi)
+            #print(S, '*********')
+            # print("S", S[1, -10:])
+            S_numpy = S.detach().cpu().numpy()
+
+
+            #    print(model.module.conv4[5].conv1.weight[0])
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
-            print("*************swiches:")
-            torch.set_printoptions(precision=7, sci_mode=False)
 
-            if model.module.phi is not None:
+        # Local training
+        if (i % args.every ==0 and mode=="train"):
+            np.set_printoptions(precision=6)
+            print("Training locally: ", S_numpy)
 
-                # mmp = 1000 * model.module.parameter #DIFF
-                # phi = F.softplus(mmp)
-                # S = phi / torch.sum(phi)
-
-
-
-                # BAD (maybe not)
-                S = model.module.phi / torch.sum(model.module.phi)
-                #
-                # # BAD
-                # # mmp = 1000 * model.module.phi
-                # # phi = F.softplus(mmp)
-                # # S = phi / torch.sum(phi)
-
-                print(S, '*********')
-
-                #print("S", S[1, -10:])
-                S_numpy= S.detach().cpu().numpy()
-
-            # Local test
-            if args.instancewise:
-                global Ss
-                if "Ss" not in globals():
-                    Ss = []
-                    Ss.append(S_numpy)
-                else:
-                    Ss.append(S_numpy)
-                np.set_printoptions(5)
-                print(S_numpy)
+        # Local test
+        if (i % 1 == 0 and mode=="val" and args.instancewise):
+            global Ss
+            if "Ss" not in globals():
+                Ss = []
+                Ss.append(S_numpy)
+            else:
+                Ss.append(S_numpy)
+            np.set_printoptions(5)
+            print("Testing locally", S_numpy)
 
 
-            # GLOBAL training
-            if ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise and model.module.phi is not None):
+        # Global training
+        if ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise and model.module.phi is not None):
 
-                np.set_printoptions(precision=6)
+            np.set_printoptions(precision=6)
 
-                switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
-                switches_2d_sort = np.sort(S_numpy, None)
-                print("Switches: ")
-                print(switches_2d_argsort[:10])
-                print(switches_2d_sort[:10])
+            switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
+            switches_2d_sort = np.sort(S_numpy, None)
+            print("Switches: ")
+            print(switches_2d_argsort[:10])
+            print(switches_2d_sort[:10])
+            print("and")
+            print(switches_2d_argsort[-10:])
+            print(switches_2d_sort[-10:])
+
+            ##### saving global ranks
+            # note: local ones we save during the test below
+            global_ranks_path = lambda \
+                ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
+
+            folder_and_name = args.resume.split(os.sep)[-2:]
+            # removing previous checkpoint
+            global old_i
+            if ("old_i" in globals()):
+                print("old_i")
+                if os.path.isfile(global_ranks_path(old_i)):
+                    os.remove(global_ranks_path(old_i))
+
+
+            os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
+            np.save(global_ranks_path(i), S_numpy)
+            old_i = i_total
+            print(f"saving ranks to {global_ranks_path(i)}")
+
+            if args.type_feature == "sq":
+
+                hor = switches_2d_argsort % S_numpy.shape[1]
+                ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
+                print(ver[:10],hor[:10])
                 print("and")
-                print(switches_2d_argsort[-10:])
-                print(switches_2d_sort[-10:])
-
-                ##### saving global ranks
-                # note: local ones we save during the test below
-                global_ranks_path = lambda \
-                    ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
-
-                folder_and_name = args.resume.split(os.sep)[-2:]
-                # removing previous checkpoint
-                global old_i
-                if ("old_i" in globals()):
-                    print("old_i")
-                    if os.path.isfile(global_ranks_path(old_i)):
-                        os.remove(global_ranks_path(old_i))
-
-
-                os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
-                np.save(global_ranks_path(i), S_numpy)
-                old_i = i_total
-                print(f"saving ranks to {global_ranks_path(i)}")
-
-                if args.type_feature == "sq":
-
-                    hor = switches_2d_argsort % S_numpy.shape[1]
-                    ver = np.floor(switches_2d_argsort // S_numpy.shape[1])
-                    print(ver[:10],hor[:10])
-                    print("and")
-                    print(ver[-10:], hor[-10:])
+                print(ver[-10:], hor[-10:])
+        #end Global training
 
 
         # measure accuracy and record loss
@@ -487,7 +485,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         every = args.every
         if i_total % every ==0 or i ==len(loader)-1 :
 
-
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             #is_best = True #saving all the checkpoints
@@ -520,12 +517,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             if args.evaluate:
                 folder_and_name = args.evaluate.split(os.sep)[-3:]
             else:
-                folder_and_name = args.save_checkpoint_path.split(os.sep)[-3:]
+                folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, i_total, qnet=True)
+                folder_and_name = folder_and_name.split(os.sep)[-3:]
                 print("save checkpoint path", args.save_checkpoint_path)
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
         #os.makedirs(f"ranks/{args.type_feature}/instance/", exist_ok=True)
         os.makedirs(ranks_save_dir, exist_ok=True)
-        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}_ep_{epoch}_it_{i_total}.npy"), Ss)
+        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}_ep_{epoch}_it_{i_total}.npy"), Ss_numpy)
+        np.set_printoptions(precision=6)
+        print(Ss_numpy)
+        print(Ss_numpy.shape)
         print(f"Saved instance ranks to: {ranks_save_dir}")
 
     return avg, is_best
@@ -565,6 +566,7 @@ def main():
             args.every = args_new.every
             args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
+            args.save_checkpoint_path = args_new.save_checkpoint_path
             print("Completed. Resuming from epoch {}.".format(
                 checkpoint['epoch']))
         else:
@@ -682,7 +684,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=10
+        splits_total=30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False

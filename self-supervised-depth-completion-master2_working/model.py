@@ -3,7 +3,7 @@
 # DepthCompletionNetQSquare - global squares
 # DepthCompletionNetQSquareNet - local squares
 # DepthCompletionNetQ - global lines (DepthCompletionNetQFit is a copy)
-
+# DepthCompletionNetQLinesNet - local lines
 
 
 import math
@@ -348,6 +348,7 @@ class DepthCompletionNetQ(nn.Module):
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
         S = self.phi / torch.sum(self.phi)
+
 
         ###
 
@@ -1382,6 +1383,7 @@ class DepthCompletionNetQLinesNet(nn.Module):
         # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
         S = self.phi / torch.sum(self.phi)
+        print ("S local lines, ", ", min: ", torch.min(S), "max:", torch.max(S))
         S = S.squeeze()
         # switch mask
         S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])

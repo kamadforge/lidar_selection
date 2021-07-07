@@ -74,7 +74,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
     sq_mode = "switch_local"
-    print(sq_mode)
+    print(f"\ntest mode for squares: {sq_mode}")
 
     if sq_mode == "random":
         #np.random.seed(16)
@@ -219,7 +219,9 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
     TOP_SELECTED = 10
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "switch"
+    lines_mode = "switch_local"
+    print(f"\ntest mode for lines: {lines_mode}")
+
     if lines_mode == "random":
         np.random.seed(15)
         lines = np.random.choice(lines_num, 10)
@@ -241,12 +243,12 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
         name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
         name = folder_and_name[2]
         # argsort the switches
-        ranks_file = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-06-23@12-44/Ss_val_checkpoint_qnet-0_i_2820_typefeature_lines.pth.tar.npy"
+        ranks_file = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-06@16-14/Ss_val_checkpoint_qnet-10_i_17177_typefeature_lines.pth.tar_ep_11_it_999.npy"
         ranks_path = os.path.split(ranks_file)[0]
         ranks_filename = os.path.split(ranks_file)[1]
         ranks_filename_core = os.path.splitext(ranks_filename)[0]
         ranks_file_argsort = os.path.join(ranks_path, ranks_filename_core + "argsort.npy" )
-        if not os.path.isfile(ranks_file_argsort):
+        if 1:#not os.path.isfile(ranks_file_argsort):
             sq = np.load(ranks_file)
             lines_argsort_local = []
             for i in range(sq.shape[0]):
