@@ -123,7 +123,7 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--instancewise', default=0, type=int)
 parser.add_argument('--every', default=20, type=int) #saving checkpoint every k images
@@ -348,19 +348,21 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
             if model.module.phi is not None:
 
-                mmp = 1000 * model.module.parameter #DIFF
-                phi = F.softplus(mmp)
-                S = phi / torch.sum(phi)
-                # print(S, '*********')
+                # mmp = 1000 * model.module.parameter #DIFF
+                # phi = F.softplus(mmp)
+                # S = phi / torch.sum(phi)
 
 
-                # BAD
-                # S = model.module.phi / torch.sum(model.module.phi)
+
+                # BAD (maybe not)
+                S = model.module.phi / torch.sum(model.module.phi)
                 #
                 # # BAD
                 # # mmp = 1000 * model.module.phi
                 # # phi = F.softplus(mmp)
                 # # S = phi / torch.sum(phi)
+
+                print(S, '*********')
 
                 #print("S", S[1, -10:])
                 S_numpy= S.detach().cpu().numpy()
@@ -373,12 +375,14 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                     Ss.append(S_numpy)
                 else:
                     Ss.append(S_numpy)
+                np.set_printoptions(5)
+                print(S_numpy)
 
 
             # GLOBAL training
             if ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise and model.module.phi is not None):
 
-                np.set_printoptions(precision=5)
+                np.set_printoptions(precision=6)
 
                 switches_2d_argsort = np.argsort(S_numpy, None) # 2d to 1d sort torch.Size([9, 31])
                 switches_2d_sort = np.sort(S_numpy, None)
@@ -542,6 +546,9 @@ def main():
             args.val = args_new.val
             args.every = args_new.every
             args.evaluate = args_new.evaluate
+            args.type_feature = args_new.type_feature
+            args.instancewise = args_new.instancewise
+            args.sparse_depth_source = args_new.sparse_depth_source
             is_eval = True
             print("Completed.")
         else:
@@ -642,7 +649,7 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(5)) #1000
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000)) #1000
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
@@ -675,7 +682,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=10000
+        splits_total=10
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False
