@@ -87,7 +87,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
         square_argsort = np.argsort(square_switches, None)
         squares = square_argsort[-TOP_SELECTED:]
     elif sq_mode =="switch_local":
-        name_full = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/sq/local/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-07-06@12-37/checkpoint_qnet-0_i_3080_typefeature_sq.pth.tar"
+        name_full = "/home/kadamczewski/Dropbox_from/Current_research/depth_completion/self-supervised-depth-completion-master2_working/ranks/sq/instance/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-07@15-50/Ss_val_checkpoint_qnet-0_i_21469_typefeature_sq.pth.tar_ep_1_it_999.npy"
         folder_and_name = name_full.split(os.sep)[-3:]
         name = folder_and_name[2]
         # argsort the switches
@@ -243,7 +243,7 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
         name = "checkpoint_qnet-10_i_7500_typefeature_sq.pth.tar"
         name = folder_and_name[2]
         # argsort the switches
-        ranks_file = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-06@16-14/Ss_val_checkpoint_qnet-10_i_17177_typefeature_lines.pth.tar_ep_11_it_999.npy"
+        ranks_file = "/home/kadamczewski/Dropbox_from/Current_research/depth_completion/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-08@01-12/Ss_val_checkpoint_qnet-0_i_999_typefeature_lines.pth.tar_ep_1_it_999.npy"
         ranks_path = os.path.split(ranks_file)[0]
         ranks_filename = os.path.split(ranks_file)[1]
         ranks_filename_core = os.path.splitext(ranks_filename)[0]
@@ -268,6 +268,6 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
 
         depth=mask_new*depth
 
-        save_pic(mask_new, lines_mode)
+        #save_pic(mask_new, lines_mode)
 
     return depth

@@ -492,19 +492,17 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best)
 
-            if mode == "train":
-
-                print("saving checkpoint at ", i_total)
-
-                if mode != "val" and args.save_checkpoint_bool:
-                    global save_checkpoint_path
-                    args.save_checkpoint_path = helper.save_checkpoint({  # save checkpoint
-                        'epoch': epoch,
-                        'model': model.module.state_dict(),
-                        'best_result': logger.best_result,
-                        'optimizer': optimizer.state_dict(),
-                        'args': args,
-                    }, is_best, epoch, logger.output_directory, args.type_feature, i_total, every, qnet=True)
+            #if mode == "train":
+            #    if args.save_checkpoint_bool:
+            #        print("saving checkpoint at ", i_total)
+            #        global save_checkpoint_path
+            #        args.save_checkpoint_path = helper.save_checkpoint({  # save checkpoint
+            #            'epoch': epoch,
+            #            'model': model.module.state_dict(),
+            #            'best_result': logger.best_result,
+            #            'optimizer': optimizer.state_dict(),
+            #            'args': args,
+            #        }, is_best, epoch, logger.output_directory, args.type_feature, i_total, every, qnet=True)
     # end for i in batch loader
 
     # get the instancewise ranks for forward passes for each of the test images
@@ -691,13 +689,13 @@ def main():
             iterate("train", args, subdatloader, model, optimizer, logger,epoch, splits_total, split_it)  # train for one epoch
             if args.instancewise:
                 result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
-        helper.save_checkpoint({ # save checkpoint
-            'epoch': epoch,
-            'model': model.module.state_dict(),
-            'best_result': logger.best_result,
-            'optimizer' : optimizer.state_dict(),
-            'args' : args,
-        }, is_best, epoch, logger.output_directory, args.type_feature)
+        #helper.save_checkpoint({ # save checkpoint
+        #    'epoch': epoch,
+        #    'model': model.module.state_dict(),
+        #    'best_result': logger.best_result,
+        #    'optimizer' : optimizer.state_dict(),
+        #    'args' : args,
+        #}, is_best, epoch, logger.output_directory, args.type_feature)
 
 
 

@@ -221,7 +221,7 @@ def adjust_learning_rate(lr_init, optimizer, epoch):
         param_group['lr'] = lr
     return lr
 
-def get_save_path(epoch, output_directory, type_feature, i=0, qnet=None):
+def get_save_path(epoch, output_directory, type_feature, i, qnet=None):
 
     if qnet:
         checkpoint_filename = os.path.join(output_directory, f'checkpoint_qnet-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
@@ -234,7 +234,7 @@ def get_save_path(epoch, output_directory, type_feature, i=0, qnet=None):
 def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, every=50, qnet=None):
 
 
-    checkpoint_filename = get_save_path(state, is_best, epoch, output_directory, type_feature, i=0, every=50, qnet=None)
+    checkpoint_filename = get_save_path(epoch, output_directory, type_feature, i)
 
 
     torch.save(state, checkpoint_filename)
