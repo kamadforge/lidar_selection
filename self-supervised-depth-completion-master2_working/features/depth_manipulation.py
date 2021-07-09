@@ -16,7 +16,7 @@ from features.show_lines import save_pic
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=None):
+def depth_adjustment(depth, adjust, iter,  folder_and_name, seed=0, rgb=None, sub_iter=None):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
 
@@ -73,11 +73,12 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "switch_local"
+    sq_mode = "random"
     print(f"\ntest mode for squares: {sq_mode}")
 
     if sq_mode == "random":
-        #np.random.seed(16)
+        np.random.seed(seed)
+        print("Seed: ", seed)
         squares = np.random.choice(square_num, TOP_SELECTED)
     elif sq_mode == "most":
         squares = np.array([int(a) for a in A_2d_argsort[-TOP_SELECTED:]])
@@ -209,7 +210,7 @@ def depth_adjustment(depth, adjust, iter,  folder_and_name, rgb=None, sub_iter=N
     return depth
 
 
-def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
+def depth_adjustment_lines(depth, adjust, iter, folder_and_name, seed=0):
 
     depth = depth.detach().cpu().numpy().squeeze()
     masks = np.load("features/kitti_pixels_to_lines_masks.npy")
@@ -223,7 +224,8 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
     print(f"\ntest mode for lines: {lines_mode}")
 
     if lines_mode == "random":
-        np.random.seed(15)
+        np.random.seed(seed)
+        print("Seed: ", seed)
         lines = np.random.choice(lines_num, 10)
     elif lines_mode == "most":
         lines_pts = masks.sum(axis=1).sum(axis=1)
@@ -244,6 +246,7 @@ def depth_adjustment_lines(depth, adjust, iter, folder_and_name):
         name = folder_and_name[2]
         # argsort the switches
         ranks_file = "/home/kadamczewski/Dropbox_from/Current_research/depth_completion/self-supervised-depth-completion-master2_working/ranks/lines/instance/checkpoint--1_i_16600_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-08@01-12/Ss_val_checkpoint_qnet-0_i_999_typefeature_lines.pth.tar_ep_1_it_999.npy"
+
         ranks_path = os.path.split(ranks_file)[0]
         ranks_filename = os.path.split(ranks_file)[1]
         ranks_filename_core = os.path.splitext(ranks_filename)[0]
