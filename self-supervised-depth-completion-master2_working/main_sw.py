@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 
 
 from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet
+from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -135,6 +135,16 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
+
+if args.evaluate == "1":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
+elif args.evaluate == "2":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+if args.resume == "1":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
+elif args.resume == "2":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+
 print(args)
 
 cuda = torch.cuda.is_available() and not args.cpu
@@ -460,11 +470,25 @@ def main():
     print("=> creating model and optimizer ... ", end='')
 
 
+    # if args.type_feature == "sq":
+    #     if args.instancewise:
+    #         model = DepthCompletionNetQSquareNet(args).to(device)
+    # elif args.type_feature == "lines":
+    #     model = DepthCompletionNetQ(args).to(device)
+
+    # model
     if args.type_feature == "sq":
         if args.instancewise:
             model = DepthCompletionNetQSquareNet(args).to(device)
+        else:
+            model = DepthCompletionNetQSquare(args).to(device)
     elif args.type_feature == "lines":
-        model = DepthCompletionNetQ(args).to(device)
+        if args.instancewise:
+            model = DepthCompletionNetQLinesNet(args).to(device)
+        else:
+            model = DepthCompletionNetQ(args).to(device)
+
+
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]

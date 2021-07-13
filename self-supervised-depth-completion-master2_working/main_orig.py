@@ -326,7 +326,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     depth_new = depth_adjustment(batch_data['d'], adjust_features, i)
             elif args.type_feature == "lines":
-                depth_new = depth_adjustment_lines(batch_data['d'])
+                depth_new = depth_adjustment_lines(batch_data['d'], i)
 
 
 

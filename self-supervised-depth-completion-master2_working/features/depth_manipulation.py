@@ -79,8 +79,9 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
 
         squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-10:]
     elif sq_mode =="switch_local":
-        name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
-        name = "checkpoint_qnet-10_i_17177_typefeature_sq.pth.tar_ep_11_it_999"
+        name = "checkpoint_qnet-0_i_999_typefeature_sq.pth.tar_ep_1_it_999"
+        #name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
+        #name = "checkpoint_qnet-10_i_17177_typefeature_sq.pth.tar_ep_11_it_999"
         #name = "checkpoint_qnet-0_i_21469_typefeature_sq.pth.tar_ep_1_it_999"
         if not os.path.isfile(f"ranks/sq/instance/Ss_val_argsort_{name}.npy"):
             sq = np.load(f"ranks/sq/instance/Ss_val_{name}.npy")
@@ -200,7 +201,7 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
     return depth
 
 
-def depth_adjustment_lines(depth):
+def depth_adjustment_lines(depth, iter):
 
     depth = depth.detach().cpu().numpy().squeeze()
     masks = np.load("kitti_pixels_to_lines_masks.npy")
@@ -209,7 +210,7 @@ def depth_adjustment_lines(depth):
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "random"
+    lines_mode = "switch_local"
     if lines_mode == "random":
         np.random.seed(15)
         lines = np.random.choice(lines_num, 10)
@@ -223,6 +224,19 @@ def depth_adjustment_lines(depth):
         #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
         lines = lines[ lines != 0]
         lines = lines[-10:]
+    elif lines_mode =="switch_local": #adapted from square
+        name = "checkpoint_qnet-0_i_2820_typefeature_lines.pth.tar"
+        if not os.path.isfile(f"ranks/lines/instance/Ss_val_argsort_{name}.npy"):
+            sq = np.load(f"ranks/lines/instance/Ss_val_{name}.npy")
+            sq_argsort_local=[]
+            for i in range(sq.shape[0]):
+                sq_argsort_local.append(np.argsort(sq[i], None))
+            sq_argsort_local = np.array(sq_argsort_local)
+            np.save(f"ranks/lines/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
+        squares_local = np.load(f"ranks/lines/instance/Ss_val_argsort_{name}.npy")
+        lines = squares_local[iter, -10:]
+
+
     print(f"Lines used {lines_mode}: ", lines)
 
     if select_mask:
