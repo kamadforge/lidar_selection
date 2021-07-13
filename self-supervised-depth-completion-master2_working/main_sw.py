@@ -519,13 +519,14 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 folder_and_name = folder_and_name.split(os.sep)[-3:]
                 print("save checkpoint path", args.save_checkpoint_path)
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
+        name = f"Ss_val_{folder_and_name[2]}_ep_{epoch}_it_{i_total}.npy"
         #os.makedirs(f"ranks/{args.type_feature}/instance/", exist_ok=True)
         os.makedirs(ranks_save_dir, exist_ok=True)
-        np.save(os.path.join(ranks_save_dir, f"Ss_val_{folder_and_name[2]}_ep_{epoch}_it_{i_total}.npy"), Ss_numpy)
+        np.save(os.path.join(ranks_save_dir, name), Ss_numpy)
         np.set_printoptions(precision=6)
         print(Ss_numpy)
         print(Ss_numpy.shape)
-        print(f"Saved instance ranks to: {ranks_save_dir}")
+        print(f"Saved instance ranks to: {ranks_save_dir}/{name}")
 
     return avg, is_best
 
@@ -649,7 +650,7 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000)) #1000
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(10)) #1000
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
@@ -682,7 +683,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=30
+        splits_total=20000 #30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False
