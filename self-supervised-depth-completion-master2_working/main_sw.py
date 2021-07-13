@@ -242,6 +242,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         # del batch_data['name']
         if mode == 'train':
             i_total = len(loader)*split_it+i
+            global i_total_train
+            i_total_train = i_total
             print("split: ", split_it)
         else:
             i_total = i
@@ -515,7 +517,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             if args.evaluate:
                 folder_and_name = args.evaluate.split(os.sep)[-3:]
             else:
-                folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, i_total, qnet=True)
+                folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, i_total_train, qnet=True)
                 folder_and_name = folder_and_name.split(os.sep)[-3:]
                 print("save checkpoint path", args.save_checkpoint_path)
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
@@ -650,7 +652,7 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(10)) #1000
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000)) #1000
     val_loader = torch.utils.data.DataLoader(
         val_dataset_sub,
         batch_size=1,
@@ -683,7 +685,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=20000 #30
+        splits_total=30 #30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False
