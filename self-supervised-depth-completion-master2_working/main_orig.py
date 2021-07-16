@@ -114,7 +114,7 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 
@@ -254,11 +254,12 @@ def iterate_eval_simple(mode, args, loader, model, optimizer, logger, epoch):
             abs_diff = (output_mm - target_mm).abs()
             print("output_mm_1", output_mm.sum())
             mse = float((torch.pow(abs_diff, 2)).mean())
-            print("mse::", mse)
-            if mse>worst:
-                worst = mse; worst_id = (i, it_random_test)
-            if mse<best:
-                best = mse; best_id = (i, it_random_test)
+            rmse = np.sqrt(mse)
+            print("rmse:", rmse)
+            if rmse>worst:
+                worst = rmse; worst_id = (i, it_random_test)
+            if rmse<best:
+                best = rmse; best_id = (i, it_random_test)
 
         print(f"Best: {best_id}, {best}")
         print(f"Worse: {worst_id}, {worst}")
@@ -410,9 +411,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 m.update(result, gpu_time, data_time, mini_batch_size)
                 for m in meters
             ]
-            print(f"mse: {result.mse:,}")
-            if result.mse > 150000000:
-                print("bad mse")
+            print(f"rmse: {result.rmse:,}")
+            # if result.mse > 150000000:
+            #     print("bad mse")
             logger.conditional_print(mode, i, epoch, lr, len(loader),
                                      block_average_meter, average_meter)
             logger.conditional_save_img_comparison(mode, i, batch_data, pred,
