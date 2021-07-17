@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
 from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
+from model import DepthCompletionNetQLines, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -58,7 +58,7 @@ parser.add_argument('-b',
                     help='mini-batch size (default: 1)')
 parser.add_argument('--lr',
                     '--learning-rate',
-                    default=1e-5, #1e-5
+                    default=1e-3, #1e-5
                     type=float,
                     metavar='LR',
                     help='initial learning rate (default 1e-5)')
@@ -269,6 +269,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         else:
             with torch.no_grad():
                 pred = model(batch_data)
+
+        print("Sum test: ", torch.sum(batch_data['d'][0:5]))
 
         vis=False
         if vis:
@@ -534,6 +536,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
         print(Ss_numpy.shape)
         print(f"Saved instance ranks to: {ranks_save_dir}/{name}")
 
+    del batch_data
     return avg, is_best
 
 
@@ -689,7 +692,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=30 #30
+        splits_total=300 #30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False
