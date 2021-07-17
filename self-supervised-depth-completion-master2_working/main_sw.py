@@ -593,7 +593,7 @@ def main():
         if args.instancewise:
             model = DepthCompletionNetQLinesNet(args).to(device)
         else:
-            model = DepthCompletionNetQ(args).to(device)
+            model = DepthCompletionNetQLines(args).to(device)
 
 
 
