@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
 from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNetQ, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
+from model import DepthCompletionNetQLines, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -590,7 +590,7 @@ def main():
         if args.instancewise:
             model = DepthCompletionNetQLinesNet(args).to(device)
         else:
-            model = DepthCompletionNetQ(args).to(device)
+            model = DepthCompletionNetQLines(args).to(device)
 
 
 
