@@ -126,7 +126,7 @@ parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--instancewise', default=1, type=int)
-parser.add_argument('--every', default=200, type=int) #saving checkpoint every k images
+parser.add_argument('--every', default=30, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
 
@@ -361,10 +361,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             # print(model.conv4.5.bn2.weight)
             # print(model.module.parameter.grad)
 
-        # Local training
+        # training
         if (i % args.every ==0 and mode=="train"):
             np.set_printoptions(precision=6)
-            print("Training locally: ", S_numpy)
+            print(f"Training {bif_mode}: ", S_numpy)
+            print(np.argsort(S_numpy, None)[-10:])
+            print(np.argsort(S_numpy, None)[:10])
+            print(f" min: {np.min(S_numpy):.4f}, max: {np.max(S_numpy):.4f}")
 
         # Local test
         if (i % 1 == 0 and mode=="val" and args.instancewise):
@@ -376,6 +379,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 Ss.append(S_numpy)
             np.set_printoptions(5)
             print("Testing locally", S_numpy)
+            print(np.argsort(S_numpy, None)[-10:])
 
 
         # Global training
@@ -704,4 +708,10 @@ def main():
 
 if __name__ == '__main__':
 
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        torch.cuda.empty_cache()
+        print("Cache emptied")
+
+

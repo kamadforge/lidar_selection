@@ -286,15 +286,16 @@ def depth_read(filename, depth_mode, depth_source):
 
         bins = bins_2d_depth.statistic
 
-        depth_adjustment(depth, depth_points, bins_2d_depth)
+        depth_adjustment_kitti(depth, depth_points, bins_2d_depth)
 
     return depth, bins #375, 1242 #376, 1241
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, depth_points, bins_2d_depth):
+def depth_adjustment_kitti(depth, depth_points, bins_2d_depth):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
+
 
     depth_new = np.zeros_like(depth)
     # find the set of points for each bin
