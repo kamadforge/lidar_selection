@@ -667,7 +667,7 @@ class DepthCompletionNetQSquare(nn.Module):
         #self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
         self.parameter = Parameter(-1e-10 * torch.ones(len(self.bin_ver)-1 , len(self.bin_hor)-1))
         self.phi=None
-        #self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
+
 
         if 'd' in self.modality:
             channels = 64 // len(self.modality)
@@ -884,7 +884,7 @@ class DepthCompletionNetQSquareNet(nn.Module):
         #self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
         self.parameter = Parameter(-1e-10 * torch.ones(len(self.bin_ver)-1 , len(self.bin_hor)-1))
         self.phi = None
-        #self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
+
 
 ##################### Q-FIT
 
@@ -1200,7 +1200,7 @@ class DepthCompletionNetQLinesNet(nn.Module):
         #self.parameter = Parameter(-1e-10 * torch.ones(num), requires_grad=True)
         # self.parameter = Parameter(-1e-10 * torch.ones(len(self.bin_ver)-1 , len(self.bin_hor)-1))
         #self.phi = None
-        self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
+        #self.parameter_mask = torch.Tensor(np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)).to(device)
 
 
 ##################### Q-FIT LINES
