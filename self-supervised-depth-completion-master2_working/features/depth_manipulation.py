@@ -79,7 +79,7 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
 
         squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-10:]
     elif sq_mode =="switch_local":
-        name = "checkpoint_qnet-0_i_999_typefeature_sq.pth.tar_ep_1_it_999"
+        name = "checkpoint_qnet-0_i_14314_typefeature_sq.pth.tar_ep_1_it_999"
         #name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
         #name = "checkpoint_qnet-10_i_17177_typefeature_sq.pth.tar_ep_11_it_999"
         #name = "checkpoint_qnet-0_i_21469_typefeature_sq.pth.tar_ep_1_it_999"
@@ -210,14 +210,38 @@ def depth_adjustment_lines(depth, iter):
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "switch_local"
+    lines_mode = "most"
     if lines_mode == "random":
-        np.random.seed(15)
-        lines = np.random.choice(lines_num, 10)
+        np.random.seed(119)
+        lines = np.random.choice(lines_num, 10, replace=False)
     elif lines_mode == "most":
-        lines_pts = masks.sum(axis=1).sum(axis=1)
-        lines_pts= lines_pts[:-1]
+        # all points in a mask
+        #lines_pts = masks.sum(axis=1).sum(axis=1)
+        #lines_pts= lines_pts[:-1]
+        # depth points present in the depth (it's a sparse representation)
+        np.set_printoptions(suppress=True)
+        #compute global
+        # if "lines_pts" not in globals():
+        #     global lines_pts
+        #     lines_pts = np.zeros(lines_num)
+        # for line_num, line in enumerate(lines_pts):
+        #     lines_pts[line_num]+=np.sum(masks[line_num] * depth > 0)
+        # print(lines_pts)
+        # lines_ptsargsort = np.argsort(lines_pts)
+        # np.save(f"ranks/lines/global/most_dense_lines.npy", lines_ptsargsort)
+        # compute local
+        if "lines_args" not in globals():
+            global lines_args
+            lines_args = []
+        lines_pts= np.zeros(masks.shape[0])
+        for line_num in range(masks.shape[0]):
+            lines_pts[line_num]=np.sum(masks[line_num] * depth > 0)
+        print(lines_pts)
         lines_ptsargsort = np.argsort(lines_pts)
+        lines_args.append(lines_ptsargsort)
+        #np.save(f"ranks/lines/instance/most_dense_lines_instance.npy", lines_args)
+        #load global
+        #lines_ptsargsort = np.load(f"ranks/lines/global/most_dense_lines.npy")
         lines = lines_ptsargsort[-10:]
     elif lines_mode == "switch":
         lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
@@ -225,7 +249,7 @@ def depth_adjustment_lines(depth, iter):
         lines = lines[ lines != 0]
         lines = lines[-10:]
     elif lines_mode =="switch_local": #adapted from square
-        name = "checkpoint_qnet-0_i_2820_typefeature_lines.pth.tar"
+        name = "checkpoint_qnet-0_i_4575_typefeature_lines.pth.tar_ep_1_it_999"
         if not os.path.isfile(f"ranks/lines/instance/Ss_val_argsort_{name}.npy"):
             sq = np.load(f"ranks/lines/instance/Ss_val_{name}.npy")
             sq_argsort_local=[]
@@ -239,6 +263,7 @@ def depth_adjustment_lines(depth, iter):
 
     print(f"Lines used {lines_mode}: ", lines)
 
+    #visualizing the selected lines (full, filled lines)
     if select_mask:
         mask_new = np.zeros_like(depth)
         for p, item in enumerate(lines):
