@@ -14,16 +14,16 @@ from features.show_lines import save_pic
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
-def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
+def depth_adjustment(depth, adjust, iter,  model_orig, seed, rgb=None, sub_iter=None):
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
 
     depth = depth.detach().cpu().numpy().squeeze()
-
     depth_points = np.where(depth > 0)
 
-    # binning
+    # binning for squares
     size_of_bin = 40
+    sq_selected=30
     oheight = depth.shape[0]
     owidth = depth.shape[1]
     bin_ver = np.arange(0, oheight, size_of_bin)
@@ -32,16 +32,12 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
     bin_hor = np.append(bin_hor, owidth)
     values = depth[np.where(depth > 0)[0], np.where(depth > 0)[1]]  # look at depth values for pixels with non-0 depth
     square_num = (len(bin_ver)-1)*(len(bin_hor)-1)
-
     # bin function
     bins_2d_depth = binned_statistic_2d(depth_points[0], depth_points[1], values.squeeze(), 'count', bins=[bin_ver, bin_hor], range=[[0, owidth], [0, oheight]])
     # hash bin function each bin number has a list of points that belong to that bin
     bin_hash = {}
     for b in range(square_num):
         bin_hash[b] = np.where(bins_2d_depth.binnumber == b)
-
-
-
     # counting points
     A_this = bins_2d_depth.statistic
     if 'A' not in globals():
@@ -49,54 +45,67 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
         A=A_this
     else:
         A=A_this+A
-
-    print("A and points")
-    print(A[7,3])
-    print(A_this[7,3])
-
     A_2d_sort = np.sort(A, None)
     A_2d_argsort = np.argsort(A, None)
     ver = np.floor(A_2d_argsort // A.shape[1])
     hor = A_2d_argsort % A.shape[1]
-
     coord_sorted = np.stack([ver, hor]).transpose()
     print("Squares by the most points")
-
-    print(coord_sorted[-10:])
-    print(A_2d_argsort[-10:])
-    print("num of points: ", A_2d_sort[-10:])
+    print(coord_sorted[-sq_selected:])
+    print(A_2d_argsort[-sq_selected:]) # argsort of the num of cumulative points
+    print("num of points: ", A_2d_sort[-sq_selected:])
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
-    sq_mode = "switch_local"
-    if sq_mode == "random":
-        np.random.seed(36)
-        squares = np.random.choice(square_num, 10)
-    elif sq_mode == "most":
-        squares = np.array([int(a) for a in A_2d_argsort[-10:]])
-    elif sq_mode == "switch":
+    feat_choice = "sq"
+    feat_mode = "random"
+    alg_mode = "global"
 
-        squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-10:]
-    elif sq_mode =="switch_local":
-        name = "checkpoint_qnet-0_i_14314_typefeature_sq.pth.tar_ep_1_it_999"
-        #name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
-        #name = "checkpoint_qnet-10_i_17177_typefeature_sq.pth.tar_ep_11_it_999"
-        #name = "checkpoint_qnet-0_i_21469_typefeature_sq.pth.tar_ep_1_it_999"
-        if not os.path.isfile(f"ranks/sq/instance/Ss_val_argsort_{name}.npy"):
-            sq = np.load(f"ranks/sq/instance/Ss_val_{name}.npy")
-            sq_argsort_local=[]
-            for i in range(sq.shape[0]):
-                sq_argsort_local.append(np.argsort(sq[i], None))
-            sq_argsort_local = np.array(sq_argsort_local)
-            np.save(f"ranks/sq/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
-        squares_local = np.load(f"ranks/sq/instance/Ss_val_argsort_{name}.npy")
-        squares = squares_local[iter, -10:]
+    if feat_mode == "random":
+        if alg_mode == "global":
+            np.random.seed(seed)
+            print("Seed: ", seed)
+        squares = np.random.choice(square_num, sq_selected)
 
+    elif feat_mode == "most":
+        if alg_mode == "global":
+            #squares = np.array([int(a) for a in A_2d_argsort[-sq_selected:]])
+            #np.save(f"ranks/sq/global/squares_most.npy", A_2d_argsort)
+            # Load global
+            squares = np.load(f"ranks/sq/global/squares_most.npy")[-sq_selected:]
+        elif alg_mode =="local":
+            if "sq_args" not in globals():
+                global sq_args
+                sq_args = []
+            A_local_argsort = np.argsort(A_this, None)
+            squares = A_local_argsort[-sq_selected:]
+            sq_args.append(A_local_argsort)
+            print("Local most argsort: ", A_local_argsort[-sq_selected:])
+            #np.save(f"ranks/sq/instance/most_dense_sq_instance.npy", sq_args)
 
+    elif feat_mode == "switch":
+        if alg_mode == "global":
+            squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-sq_selected:]
+        elif alg_mode == "local":
+            name = "checkpoint_qnet-0_i_14314_typefeature_sq.pth.tar_ep_1_it_999"
+            #name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
+            #name = "checkpoint_qnet-10_i_17177_typefeature_sq.pth.tar_ep_11_it_999"
+            #name = "checkpoint_qnet-0_i_21469_typefeature_sq.pth.tar_ep_1_it_999"
+            if not os.path.isfile(f"ranks/sq/instance/Ss_val_argsort_{name}.npy"):
+                sq = np.load(f"ranks/sq/instance/Ss_val_{name}.npy")
+                sq_argsort_local=[]
+                for i in range(sq.shape[0]):
+                    sq_argsort_local.append(np.argsort(sq[i], None))
+                sq_argsort_local = np.array(sq_argsort_local)
+                np.save(f"ranks/sq/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
+            squares_local = np.load(f"ranks/sq/instance/Ss_val_argsort_{name}.npy")
+            squares = squares_local[iter, -sq_selected:]
 
+    print(f"Squares used {feat_mode}: ", squares)
 
-    print(f"Squares used {sq_mode}: ", squares)
+    run_info=[feat_choice, alg_mode, feat_mode, model_orig]
+
 
     # draw the selected squares
     # if "ii" not in globals():
@@ -105,9 +114,8 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
     # else:
     #     ii+=1
 
-
-    if rgb != None and 1 and (iter % 1)==0:
-        draw("sq", rgb, depth, squares, A.shape[1], str(iter)+"_"+str(sub_iter))
+    # if rgb != None and 1 and (iter % 1)==0:
+    #     draw("sq", rgb, depth, squares, A.shape[1], run_info, str(iter)+"_"+str(sub_iter))
 
     ver = np.floor(squares // A.shape[1])
     hor = squares % A.shape[1]
@@ -120,7 +128,7 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
 
         depth=mask_new*depth
 
-        save_pic(mask_new, "sq_"+sq_mode)
+        save_pic(mask_new, "sq_"+feat_mode)
 
 
     remove_depth=0
@@ -198,10 +206,11 @@ def depth_adjustment(depth, adjust, iter,  rgb=None, sub_iter=None):
 
         depth = depth_new
 
-    return depth
+    return depth, alg_mode, feat_mode, squares, A.shape
 
 
-def depth_adjustment_lines(depth, iter):
+
+def depth_adjustment_lines(depth, iter, model_orig, seed=116):
 
     depth = depth.detach().cpu().numpy().squeeze()
     masks = np.load("kitti_pixels_to_lines_masks.npy")
@@ -210,58 +219,67 @@ def depth_adjustment_lines(depth, iter):
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     lines_num = 65
     lines = np.arange(lines_num)
-    lines_mode = "most"
-    if lines_mode == "random":
-        np.random.seed(119)
+
+    feat_choice = "lines"
+    feat_mode = "switch"
+    alg_mode = "global"
+
+    if feat_mode == "random":
+        if alg_mode == "global":
+            np.random.seed(seed) # comment to get local random
+            print("Seed: ", seed)
         lines = np.random.choice(lines_num, 10, replace=False)
-    elif lines_mode == "most":
+    elif feat_mode == "most":
+
         # all points in a mask
         #lines_pts = masks.sum(axis=1).sum(axis=1)
         #lines_pts= lines_pts[:-1]
         # depth points present in the depth (it's a sparse representation)
         np.set_printoptions(suppress=True)
-        #compute global
-        # if "lines_pts" not in globals():
-        #     global lines_pts
-        #     lines_pts = np.zeros(lines_num)
-        # for line_num, line in enumerate(lines_pts):
-        #     lines_pts[line_num]+=np.sum(masks[line_num] * depth > 0)
-        # print(lines_pts)
-        # lines_ptsargsort = np.argsort(lines_pts)
-        # np.save(f"ranks/lines/global/most_dense_lines.npy", lines_ptsargsort)
-        # compute local
-        if "lines_args" not in globals():
-            global lines_args
-            lines_args = []
-        lines_pts= np.zeros(masks.shape[0])
-        for line_num in range(masks.shape[0]):
-            lines_pts[line_num]=np.sum(masks[line_num] * depth > 0)
-        print(lines_pts)
-        lines_ptsargsort = np.argsort(lines_pts)
-        lines_args.append(lines_ptsargsort)
-        #np.save(f"ranks/lines/instance/most_dense_lines_instance.npy", lines_args)
-        #load global
-        #lines_ptsargsort = np.load(f"ranks/lines/global/most_dense_lines.npy")
+        if alg_mode == "global":
+            # compute global
+            # if "lines_pts" not in globals():
+            #     global lines_pts
+            #     lines_pts = np.zeros(lines_num)
+            # for line_num, line in enumerate(lines_pts):
+            #     lines_pts[line_num]+=np.sum(masks[line_num] * depth > 0)
+            # print(lines_pts)
+            # lines_ptsargsort = np.argsort(lines_pts)
+            # np.save(f"ranks/lines/global/most_dense_lines.npy", lines_ptsargsort)
+            # Load global
+            lines_ptsargsort = np.load(f"ranks/lines/global/most_dense_lines.npy")
+        elif alg_mode == "local":
+            if "lines_args" not in globals():
+                global lines_args
+                lines_args = []
+            lines_pts= np.zeros(masks.shape[0])
+            for line_num in range(masks.shape[0]):
+                lines_pts[line_num]=np.sum(masks[line_num] * depth > 0)
+            print(lines_pts)
+            lines_ptsargsort = np.argsort(lines_pts)
+            lines_args.append(lines_ptsargsort)
+            #np.save(f"ranks/lines/instance/most_dense_lines_instance.npy", lines_args)
         lines = lines_ptsargsort[-10:]
-    elif lines_mode == "switch":
-        lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
-        #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
-        lines = lines[ lines != 0]
-        lines = lines[-10:]
-    elif lines_mode =="switch_local": #adapted from square
-        name = "checkpoint_qnet-0_i_4575_typefeature_lines.pth.tar_ep_1_it_999"
-        if not os.path.isfile(f"ranks/lines/instance/Ss_val_argsort_{name}.npy"):
-            sq = np.load(f"ranks/lines/instance/Ss_val_{name}.npy")
-            sq_argsort_local=[]
-            for i in range(sq.shape[0]):
-                sq_argsort_local.append(np.argsort(sq[i], None))
-            sq_argsort_local = np.array(sq_argsort_local)
-            np.save(f"ranks/lines/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
-        squares_local = np.load(f"ranks/lines/instance/Ss_val_argsort_{name}.npy")
-        lines = squares_local[iter, -10:]
+    elif feat_mode == "switch":
+        if alg_mode == "global":
+            lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
+            #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
+            lines = lines[ lines != 0]
+            lines = lines[-10:]
+        elif alg_mode =="local": #adapted from square
+            name = "checkpoint_qnet-0_i_4575_typefeature_lines.pth.tar_ep_1_it_999"
+            if not os.path.isfile(f"ranks/lines/instance/Ss_val_argsort_{name}.npy"):
+                sq = np.load(f"ranks/lines/instance/Ss_val_{name}.npy")
+                sq_argsort_local=[]
+                for i in range(sq.shape[0]):
+                    sq_argsort_local.append(np.argsort(sq[i], None))
+                sq_argsort_local = np.array(sq_argsort_local)
+                np.save(f"ranks/lines/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
+            squares_local = np.load(f"ranks/lines/instance/Ss_val_argsort_{name}.npy")
+            lines = squares_local[iter, -10:]
 
 
-    print(f"Lines used {lines_mode}: ", lines)
+    print(f"Lines used {feat_mode}: ", lines)
 
     #visualizing the selected lines (full, filled lines)
     if select_mask:
@@ -271,6 +289,6 @@ def depth_adjustment_lines(depth, iter):
 
         depth=mask_new*depth
 
-        save_pic(mask_new, lines_mode)
+        save_pic(mask_new, feat_mode)
 
-    return depth
+    return depth, alg_mode, feat_mode, lines
