@@ -413,9 +413,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
 
             os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
-            np.save(global_ranks_path(i), S_numpy)
+            np.save(global_ranks_path(i_total), S_numpy)
             old_i = i_total
-            print(f"saving ranks to {global_ranks_path(i)}")
+            print(f"saving ranks to {global_ranks_path(i_total)}")
 
             if args.type_feature == "sq":
 
