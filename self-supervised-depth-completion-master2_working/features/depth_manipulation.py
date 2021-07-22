@@ -23,7 +23,7 @@ def depth_adjustment(depth, adjust, iter,  model_orig, seed, rgb=None, sub_iter=
 
     # binning for squares
     size_of_bin = 40
-    sq_selected=30
+    sq_selected=50
     oheight = depth.shape[0]
     owidth = depth.shape[1]
     bin_ver = np.arange(0, oheight, size_of_bin)
@@ -59,8 +59,8 @@ def depth_adjustment(depth, adjust, iter,  model_orig, seed, rgb=None, sub_iter=
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     squares = np.arange(square_num)
     feat_choice = "sq"
-    feat_mode = "random"
-    alg_mode = "global"
+    feat_mode = "switch"
+    alg_mode = "local"
 
     if feat_mode == "random":
         if alg_mode == "global":
@@ -218,9 +218,9 @@ def depth_adjustment_lines(depth, iter, model_orig, seed=116):
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     lines_num = 65
+    lines_selected=10
     lines = np.arange(lines_num)
 
-    feat_choice = "lines"
     feat_mode = "switch"
     alg_mode = "global"
 
@@ -228,7 +228,7 @@ def depth_adjustment_lines(depth, iter, model_orig, seed=116):
         if alg_mode == "global":
             np.random.seed(seed) # comment to get local random
             print("Seed: ", seed)
-        lines = np.random.choice(lines_num, 10, replace=False)
+        lines = np.random.choice(lines_num, lines_selected, replace=False)
     elif feat_mode == "most":
 
         # all points in a mask
@@ -259,15 +259,18 @@ def depth_adjustment_lines(depth, iter, model_orig, seed=116):
             lines_ptsargsort = np.argsort(lines_pts)
             lines_args.append(lines_ptsargsort)
             #np.save(f"ranks/lines/instance/most_dense_lines_instance.npy", lines_args)
-        lines = lines_ptsargsort[-10:]
+        lines = lines_ptsargsort[-lines_selected:]
     elif feat_mode == "switch":
         if alg_mode == "global":
-            lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
+            #lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_lines_iter_1040.npy") #gd 16600
+            lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/9i/Ss_val_checkpoint_qnet-10_i_3145_typefeature_lines.pth.tar_ep_11_it_999.npy") #9i
+            lines = np.argsort(lines)
             #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
             lines = lines[ lines != 0]
-            lines = lines[-10:]
+            lines = lines[-lines_selected:]
         elif alg_mode =="local": #adapted from square
-            name = "checkpoint_qnet-0_i_4575_typefeature_lines.pth.tar_ep_1_it_999"
+            name = "checkpoint_qnet-0_i_4575_typefeature_lines.pth.tar_ep_1_it_999" # gd 16600
+            name ="checkpoint_qnet-10_i_3145_typefeature_lines.pth.tar_ep_11_it_999"
             if not os.path.isfile(f"ranks/lines/instance/Ss_val_argsort_{name}.npy"):
                 sq = np.load(f"ranks/lines/instance/Ss_val_{name}.npy")
                 sq_argsort_local=[]
@@ -276,7 +279,7 @@ def depth_adjustment_lines(depth, iter, model_orig, seed=116):
                 sq_argsort_local = np.array(sq_argsort_local)
                 np.save(f"ranks/lines/instance/Ss_val_argsort_{name}.npy", sq_argsort_local)
             squares_local = np.load(f"ranks/lines/instance/Ss_val_argsort_{name}.npy")
-            lines = squares_local[iter, -10:]
+            lines = squares_local[iter, -lines_selected:]
 
 
     print(f"Lines used {feat_mode}: ", lines)
