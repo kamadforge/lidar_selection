@@ -58,7 +58,7 @@ parser.add_argument('-b',
                     help='mini-batch size (default: 1)')
 parser.add_argument('--lr',
                     '--learning-rate',
-                    default=1e-3, #1e-5
+                    default=1e-4, #1e-5
                     type=float,
                     metavar='LR',
                     help='initial learning rate (default 1e-5)')
@@ -123,9 +123,9 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--instancewise', default=0, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--instancewise', default=1, type=int)
 parser.add_argument('--every', default=30, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
@@ -400,22 +400,29 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
             ##### saving global ranks
             # note: local ones we save during the test below
-            global_ranks_path = lambda \
-                ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
 
-            folder_and_name = args.resume.split(os.sep)[-2:]
-            # removing previous checkpoint
+            # global_ranks_path = lambda \
+            #         ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
+
+            folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, i_total_train, qnet=False)
+            parameters_name = folder_and_name.split(os.sep)[-4]
+            checkpoint_name = args.resume.split(os.sep)[-1]
+
+            ranks_save_dir = f"ranks/{args.type_feature}/global/{checkpoint_name}/{parameters_name}"
+            ranks_global_full_path = lambda  ii : os.path.join(ranks_save_dir, f"Ss_val_ep_{epoch}_it_{ii}.npy")
+            #ranks_global_full_path = os.path.join(ranks_save_dir, rank_global_name(i_total) )
+            os.makedirs(ranks_save_dir, exist_ok=True)
+
+            # removing previous old ranks
             global old_i
             if ("old_i" in globals()):
                 print("old_i")
-                if os.path.isfile(global_ranks_path(old_i)):
-                    os.remove(global_ranks_path(old_i))
-
-
-            os.makedirs(f"ranks/{args.type_feature}/global/{folder_and_name[0]}", exist_ok=True)
-            np.save(global_ranks_path(i_total), S_numpy)
+                if os.path.isfile(ranks_global_full_path(old_i)):
+                    os.remove(ranks_global_full_path(old_i))
+            # save new ranks
+            np.save(ranks_global_full_path(i_total), S_numpy)
             old_i = i_total
-            print(f"saving ranks to {global_ranks_path(i_total)}")
+            print(f"saving ranks to {ranks_global_full_path(i_total)}")
 
             if args.type_feature == "sq":
 
@@ -692,7 +699,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=300 #30
+        splits_total=2000 #30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False
