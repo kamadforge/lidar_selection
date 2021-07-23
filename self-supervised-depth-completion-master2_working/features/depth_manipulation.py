@@ -23,7 +23,7 @@ def depth_adjustment(depth, adjust, iter,  model_orig, seed, rgb=None, sub_iter=
 
     # binning for squares
     size_of_bin = 40
-    sq_selected=50
+    sq_selected= 30
     oheight = depth.shape[0]
     owidth = depth.shape[1]
     bin_ver = np.arange(0, oheight, size_of_bin)
@@ -60,7 +60,7 @@ def depth_adjustment(depth, adjust, iter,  model_orig, seed, rgb=None, sub_iter=
     squares = np.arange(square_num)
     feat_choice = "sq"
     feat_mode = "switch"
-    alg_mode = "local"
+    alg_mode = "global"
 
     if feat_mode == "random":
         if alg_mode == "global":
@@ -86,7 +86,9 @@ def depth_adjustment(depth, adjust, iter,  model_orig, seed, rgb=None, sub_iter=
 
     elif feat_mode == "switch":
         if alg_mode == "global":
-            squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-sq_selected:]
+            #squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-sq_selected:] 16600
+            squares_val = np.load(f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/sq/global/adc10d77ffe8dfd17d4346730b7fc43809c8360a_9i_jul21/Ss_val_checkpoint_qnet-9_i_0_typefeature_None.pth.tar_iter_39990.npy") #9i
+            squares = np.argsort(squares_val, None)[-sq_selected:]
         elif alg_mode == "local":
             name = "checkpoint_qnet-0_i_14314_typefeature_sq.pth.tar_ep_1_it_999"
             #name = "checkpoint_qnet--1_i_550_typefeature_sq.pth.tar"
@@ -221,8 +223,8 @@ def depth_adjustment_lines(depth, iter, model_orig, seed=116):
     lines_selected=10
     lines = np.arange(lines_num)
 
-    feat_mode = "switch"
-    alg_mode = "global"
+    feat_mode = "most"
+    alg_mode = "local"
 
     if feat_mode == "random":
         if alg_mode == "global":
