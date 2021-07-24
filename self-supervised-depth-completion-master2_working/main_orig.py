@@ -114,10 +114,14 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
 parser.add_argument('--depth_adjust', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--seed', default=120, type=int)
+
+parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--test_mode', default="switch")
+parser.add_argument('--feature_mode', default='global')
+parser.add_argument('--feature_num', default=10, type=int)
 
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
@@ -325,11 +329,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         if depth_adjust and args.use_d:
             if args.type_feature == "sq":
                 if args.use_rgb:
-                    depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], adjust_features, i, model_orig, args.seed,  batch_data['rgb'])
+                    depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, adjust_features, i, model_orig, args.seed,  batch_data['rgb'])
                 else:
-                    depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], adjust_features, i, model_orig, args.seed)
+                    depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, adjust_features, i, model_orig, args.seed)
             elif args.type_feature == "lines":
-                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], i, model_orig, args.seed)
+                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, i, model_orig, args.seed)
 
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
         data_time = time.time() - start
@@ -466,6 +470,9 @@ def main():
             args.use_d = args_new.use_d
             args.input = args_new.input
             args.seed = args_new.seed
+            args.feature_num = args_new.feature_num
+            args.feature_mode = args_new.feature_mode
+            args.test_mode = args_new.test_mode
             is_eval = True
             print("Completed.")
         else:
