@@ -5,7 +5,7 @@ import torch
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
+from dataloaders.kitti_loader_apr2 import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNet
 from metrics import AverageMeter, Result
 import criteria
@@ -170,7 +170,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     print("\nTraining")
     prune_type = "sq"  # sq, vlines, nothing
-    square_choice = "latin_sw"
+    square_choice = "most"
     if prune_type=="sq":
         print(f"Features: squares\n Square choice: {square_choice}")
 
@@ -202,6 +202,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             #     print("switches", A)
             #get the ver and hor coordinates of the most important squares
             A_2d_argsort = np.argsort(A, None)[::-1]
+            if square_choice=="most":
+                squares_top_file = "ranks/sq/global/squares_most.npy"
+                A_2d_argsort = np.load(squares_top_file)[::-1]
             ver = np.floor(A_2d_argsort // A.shape[1])
             hor = A_2d_argsort % A.shape[1]
             A_list = np.stack([ver, hor]).transpose()
@@ -210,6 +213,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
             if square_choice=="full":
                 squares_top = A_list
+
+            if square_choice=="most":
+                squares_top = A_list[:20]
 
             if square_choice=="best_sw":
                 squares_top = A_list[:20]
