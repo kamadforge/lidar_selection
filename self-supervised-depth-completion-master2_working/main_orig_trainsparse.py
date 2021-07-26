@@ -170,7 +170,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     print("\nTraining")
     prune_type = "sq"  # sq, vlines, nothing
-    square_choice = "most"
+    square_choice = "best_sw"
     if prune_type=="sq":
         print(f"Features: squares\n Square choice: {square_choice}")
 
@@ -268,7 +268,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 rand_idx = np.random.choice(len(A_list[:93]), 20)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
-
+                
+            print("squares choice: ", squares_top)
             # after selecting indices of the squares save in squares_top
             squares_top_scaled = np.array(squares_top)* square_size
             mask = np.zeros((352, 1216))
