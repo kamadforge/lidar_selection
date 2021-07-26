@@ -87,8 +87,8 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, rank_file_glob
     elif test_mode == "switch":
         if feature_mode == "global":
             #squares = np.load(f"ranks/switches_argsort_2D_equal_iter_790.npy")[-sq_selected:] 16600
-            squares_val = np.load(f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/sq/global/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.1.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-23@17-46/Ss_val_ep_11_it_3030.npy") #9i
-            squares_val = np.load(f"ranks/sq/global/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.01.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-23@17-46/Ss_val_ep_11_it_1560.npy")  # 9i
+            #squares_val = np.load(f"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/sq/global/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.1.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-23@17-46/Ss_val_ep_11_it_3030.npy") #9i
+            #squares_val = np.load(f"ranks/sq/global/checkpoint_qnet-9_i_0_typefeature_None.pth.tar/mode=dense.input=gd.resnet34.criterion=l2.lr=0.01.bs=1.wd=0.0.pretrained=False.jitter=0.1.time=2021-07-23@17-46/Ss_val_ep_11_it_1560.npy")  # 9i
             squares_val = np.load(rank_file_global)
 
             squares = np.argsort(squares_val, None)[-sq_selected:]
