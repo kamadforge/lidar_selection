@@ -20,6 +20,7 @@ from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
+from script_test_all import test_features_in_checkpoint, test_switch
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -149,6 +150,9 @@ if args.resume == "1":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.resume == "2":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+
+test_features_in_checkpoint(args.resume)
+
 
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
@@ -423,6 +427,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             np.save(ranks_global_full_path(i_total), S_numpy)
             old_i = i_total
             print(f"saving ranks to {ranks_global_full_path(i_total)}")
+
+            print ("\n\nTesting global ranks")
+            test_switch(args.resume, ranks_global_full_path(i_total))
 
             if args.type_feature == "sq":
 
