@@ -132,7 +132,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
 
         depth=mask_new*depth
 
-        save_pic(mask_new, "sq_"+test_mode)
+        #save_pic(mask_new, "sq_"+test_mode)
 
 
     remove_depth=0
