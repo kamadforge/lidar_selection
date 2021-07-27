@@ -234,11 +234,13 @@ def get_save_path(epoch, output_directory, type_feature, i, qnet=None):
 def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, every=50, qnet=None):
 
 
+
     checkpoint_filename = get_save_path(epoch, output_directory, type_feature, i)
 
 
     torch.save(state, checkpoint_filename)
     print(f"checkpoint saved to {checkpoint_filename}")
+
 
         # best_filename = os.path.join(output_directory, f'model_best-{str(epoch - 1)}_i_{i}_typefeature_{type_feature}.pth.tar')
         # shutil.copyfile(checkpoint_filename, best_filename)
@@ -246,8 +248,11 @@ def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, 
     if 1:
         prev_checkpoint_filename = os.path.join(
             output_directory, f'checkpoint_qnet-{str(epoch - 1)}_i_{i-every}_typefeature_{type_feature}.pth.tar')
-        if os.path.exists(prev_checkpoint_filename) and ((i-every) % 20000 != 0):
+
+        if os.path.exists(prev_checkpoint_filename) and (((i-every) % 10000 != 0) or ((i-every) % 85800 != 0)):
+
             os.remove(prev_checkpoint_filename)
+            print(f"Removed checkpoint to: {prev_checkpoint_filename}")
 
     return checkpoint_filename
 

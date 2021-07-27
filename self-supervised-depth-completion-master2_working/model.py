@@ -1167,6 +1167,7 @@ class DepthCompletionNetQSquareNet(nn.Module):
             ) + min_distance  # the minimum range of Velodyne is around 3 feet ~= 0.9m
 
 
+
 ################################################
 ################################################
 ################################################
@@ -1182,6 +1183,7 @@ class DepthCompletionNetQLinesNet(nn.Module):
             layers)
         super(DepthCompletionNetQLinesNet, self).__init__()
         self.modality = args.input
+
 
         # self.img_height=352
         # self.img_width=1216
@@ -1210,44 +1212,58 @@ class DepthCompletionNetQLinesNet(nn.Module):
             channels = 64 // len(self.modality)
             #channels = 16
             self.conv1_d_qfit = conv_bn_relu(1,
+
                                         channels_qfit,
+
                                         kernel_size=3,
                                         stride=1,
                                         padding=1)
         if 'rgb' in self.modality:
             channels = 64 * 3 // len(self.modality)
             self.conv1_img_qfit = conv_bn_relu(3,
+
                                           channels_qfit,
+
                                           kernel_size=3,
                                           stride=1,
                                           padding=1)
         elif 'g' in self.modality:
             channels = 64 // len(self.modality)
             self.conv1_img_qfit = conv_bn_relu(1,
+
                                           channels_qfit,
+
                                           kernel_size=3,
                                           stride=1,
                                           padding=1)
 
         self.conv2_qfit = conv_bn_relu(64,
+
                                            channels_qfit,
+
                                            kernel_size=5,
                                            stride=3,
                                            padding=1)
 
+
         self.conv3_qfit = conv_bn_relu(channels_qfit,
                                        channels_qfit,
+
                                        kernel_size=5,
                                        stride=3,
                                        padding=1)
 
+
         self.conv4_qfit = conv_bn_relu(channels_qfit,
                                        channels_qfit,
+
                                        kernel_size=5,
                                        stride=2,
                                        padding=1)
 
+
         self.conv5_qfit = conv_bn_relu(channels_qfit,
+
                                        1,
                                        kernel_size=5,
                                        stride=2,
@@ -1372,6 +1388,7 @@ class DepthCompletionNetQLinesNet(nn.Module):
             conv1_qfit = conv1_d_qfit if (self.modality == 'd') else conv1_img_qfit
 
         conv2_qfit = self.conv2_qfit(conv1_qfit)
+
         print("conv2 ", torch.sum(conv2_qfit))
         conv3_qfit = self.conv3_qfit(conv2_qfit)
         print("conv3 ", torch.sum(conv3_qfit))
@@ -1382,6 +1399,7 @@ class DepthCompletionNetQLinesNet(nn.Module):
         flat = self.flatten(conv5_qfit)
         fc1_qfit = self.lin1(flat)
         print("fc1_qfit ", torch.sum(fc1_qfit))
+
         #fc1_qfit = self.fc1_qfit(flat)
         #pre_phi = conv5_qfit.squeeze()[:, :-2]
         self.phi = F.softplus(fc1_qfit)
@@ -1394,8 +1412,10 @@ class DepthCompletionNetQLinesNet(nn.Module):
 
         S = self.phi / torch.sum(self.phi)
         print ("S local lines, ", ", min: ", torch.min(S), "max:", torch.max(S))
+
         print (S[0, -10:])
         print (torch.argsort(S)[0, -10:])
+
         S = S.squeeze()
         # switch mask
         S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])

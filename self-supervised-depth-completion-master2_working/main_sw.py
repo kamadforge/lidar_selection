@@ -13,9 +13,11 @@ import torch.utils.data
 import torch.nn.functional as F
 from PIL import Image, ImageDraw
 
+
 #from dataloaders.kitti_loader import load_calib, oheight, owidth, input_options, KittiDepth
 from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNetQLines, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
+
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -165,7 +167,17 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
-args.save_checkpoint_path = ""
+
+if args.evaluate == "1":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
+elif args.evaluate == "2":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+if args.resume == "1":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
+elif args.resume == "2":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+
+
 print(args)
 
 # cuda computation
@@ -597,6 +609,7 @@ def main():
 
     print("=> creating model and optimizer ... ", end='')
 
+
     # model
     if args.type_feature == "sq":
         if args.instancewise:
@@ -608,6 +621,7 @@ def main():
             model = DepthCompletionNetQLinesNet(args).to(device)
         else:
             model = DepthCompletionNetQLines(args).to(device)
+
 
 
 
