@@ -184,6 +184,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
         data_time = time.time() - start
         start = time.time()
+        
 
         if prune_type == "vlines":
             np.random.seed(10)
@@ -209,16 +210,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             hor = A_2d_argsort % A.shape[1]
             A_list = np.stack([ver, hor]).transpose()
             square_size = 40
-            squares_top_num = 20
+            squares_top_num = 150
 
             if square_choice=="full":
                 squares_top = A_list
 
             if square_choice=="most":
-                squares_top = A_list[:20]
+                squares_top = A_list[:squares_top_num]
 
             if square_choice=="best_sw":
-                squares_top = A_list[:20]
+                squares_top = A_list[:squares_top_num]
 
             if square_choice=="latin_sw":
                 #creating latin grid (with big squares/blocks)
@@ -236,7 +237,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                             elem_in = True
                     if not elem_in:
                         best_latin_coors.append(i1)
-                    if len(best_latin_coors)==20:
+                    if len(best_latin_coors)==squares_top_num:
                         break;
                 squares_top = np.array(best_latin_coors)
 
@@ -247,8 +248,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 hor_large = np.linspace(0, 30, 7)
                 ver_large = np.arange(10)
                 # random sample from positive blocks
-                hor_large_rand = np.random.choice(len(hor_large), 20)
-                ver_large_rand  = np.random.choice([6,7,8], 20)
+                hor_large_rand = np.random.choice(len(hor_large), squares_top_num)
+                ver_large_rand  = np.random.choice([6,7,8], squares_top_num)
                 # selecting a small square from A_list with given corrdinates within a block
                 for j in range(len(hor_large_rand)):
                     elem = np.where((A_list[:, 0]== ver_large_rand[j]) & (A_list[:, 1] == hor_large[hor_large_rand[j]]))[0][0]
@@ -258,14 +259,14 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
             elif square_choice=="random_all":
                 np.random.seed(12)
-                rand_idx = np.random.choice(len(A_list), 20)
+                rand_idx = np.random.choice(len(A_list), squares_top_num)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
 
             elif square_choice=="random_pos": # from squares which include depth points
                 np.random.seed(12)
                 #choose from the squares which have roughly positive number of depth points
-                rand_idx = np.random.choice(len(A_list[:93]), 20)
+                rand_idx = np.random.choice(len(A_list[:93]), squares_top_num)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
 
