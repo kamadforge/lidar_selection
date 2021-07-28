@@ -248,10 +248,10 @@ def get_folder_name(args):
     else:
         prefix = "mode={}.".format(args.train_mode)
     return os.path.join(args.result,
-        prefix + 'input={}.resnet{}.criterion={}.lr={}.bs={}.wd={}.pretrained={}.jitter={}.time={}'.
+        prefix + 'input={}.resnet{}.criterion={}.lr={}.bs={}.wd={}.pretrained={}.jitter={}.time={}.sparse_train={}'.
         format(args.input, args.layers, args.criterion, \
             args.lr, args.batch_size, args.weight_decay, \
-            args.pretrained, args.jitter, current_time
+            args.pretrained, args.jitter, current_time, args.training_sparse_opt
             ))
 
 
