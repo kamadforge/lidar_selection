@@ -132,14 +132,14 @@ parser.add_argument('--sparse_depth_source', default='nonbin')
 
 parser.add_argument('--seed', default=120, type=int)
 
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--test_mode', default="switch")
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=10, type=int)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 
-
+parser.add_argument('--draw_features_rgb', default=1)
 args = parser.parse_args()
 
 if args.evaluate == "1":
@@ -483,9 +483,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
 
         # draw features
-        # run_info = [args.type_feature, alg_mode, feat_mode, model_orig]
-        # if batch_data['rgb'] != None and 1 and (i % 1) == 0:
-        #     draw("sq", batch_data['rgb'], batch_data['d'], features, shape[1], run_info, i, result)
+        if args.draw_features_rgb:
+            run_info = [args.type_feature, alg_mode, feat_mode, model_orig]
+            if batch_data['rgb'] != None and 1 and (i % 1) == 0:
+                draw(args.type_feature, batch_data['rgb'], batch_data['d'], features, 65, run_info, i, result)
 
     return avg, is_best
 
@@ -515,7 +516,7 @@ def main():
             args.feature_num = args_new.feature_num
             args.feature_mode = args_new.feature_mode
             args.test_mode = args_new.test_mode
-
+            args.draw_features_rgb = args_new.draw_features_rgb
             is_eval = True
             print("Completed.")
         else:

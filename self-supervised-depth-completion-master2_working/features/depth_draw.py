@@ -71,5 +71,5 @@ def draw(type_feature, rgb, depth, switches_2d_argsort, shape_1, run_info, iter=
             for p in range(len(x)):
                 img1.ellipse((x[p] - r, y[p] - r, x[p] + r, y[p] + r), fill=(255, 0, 0, 0))
 
-        lala = ma2.save(f"switches_photos/lines/lines_{tim}.jpg")
+        lala = ma2.save(f"switches_photos/lines/lines_{iter}.jpg")
         print("saving")
