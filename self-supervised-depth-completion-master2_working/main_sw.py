@@ -153,7 +153,7 @@ if args.resume == "1":
 elif args.resume == "2":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 
-test_features_in_checkpoint(args.resume)
+test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)
@@ -433,7 +433,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             print(f"saving ranks to {ranks_global_full_path(i_total)}")
 
             print ("\n\nTesting global ranks")
-            test_switch(args.resume, ranks_global_full_path(i_total))
+            test_switch(args.resume, ranks_global_full_path(i_total), args.input)
 
             if args.type_feature == "sq":
 
@@ -712,7 +712,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=2000 #30
+        splits_total=500 #30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False
