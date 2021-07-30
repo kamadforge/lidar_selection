@@ -27,6 +27,7 @@ Saved results:
 checkpoints are saved in depth../results/
 the ranks are saved in depth../self../ranks/
 the photos are saved in depth../self../switch_photos
+the predicted depth in depth../self../depth_predicted
 
 
 Other crucial files used:

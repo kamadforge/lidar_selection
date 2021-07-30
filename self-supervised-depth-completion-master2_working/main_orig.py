@@ -126,8 +126,9 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 
-parser.add_argument('--depth_adjust', default=1, type=int)
+parser.add_argument('--depth_adjust', default=0, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
+parser.add_argument('--depth_save', default=1, type=int)
 
 
 parser.add_argument('--seed', default=120, type=int)
@@ -225,9 +226,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     for i, batch_data in enumerate(loader):
 
-        # name = batch_data['name'][0]
-        # print(name)
-        # del batch_data['name']
+        sparse_depth_pathname = batch_data['d_path'][0]
+        print(sparse_depth_pathname)
+        del batch_data['d_path']
         print ("i: ", i)
         start = time.time()
         batch_data = {
@@ -260,7 +261,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         else:
             with torch.no_grad():
                 pred = model(batch_data)
-                #torch.save(pred, f"depth_predicted/{name[:-4]}.t")
+
         # im = batch_data['d'].detach().cpu().numpy()
         # im_sq = im.squeeze()
         # plt.figure()
@@ -365,10 +366,22 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 }, is_best, epoch, logger.output_directory, args.type_feature, i, every, "scratch")
 
         # draw features
-        if args.draw_features_rgb and args.evaluate:
+        if args.draw_features_rgb and args.evaluate and depth_adjust:
             run_info = [args.type_feature, alg_mode, feat_mode, model_orig]
             if batch_data['rgb'] != None and 1 and (i % 1) == 0:
                 draw(args.type_feature, batch_data['rgb'], batch_data['d'], features, 65, run_info, i, result)
+        if args.depth_save and args.evaluate:
+            name=os.path.split(sparse_depth_pathname)[-1]
+            if depth_adjust:
+                    parameters_name = args.evaluate.split(os.sep)
+                    path_depth = f"depth_predicted/{args.type_feature}/{args.feature_mode}/{args.test_mode}/{parameters_name[-2]}/{parameters_name[-1]}/"
+                    os.makedirs(path_depth, exist_ok=True)
+                    torch.save(pred, path_depth+f"{name}.pt")
+            else:
+                    parameters_name = args.evaluate.split(os.sep)
+                    path_depth = f"depth_predicted/full/{parameters_name[-2]}/{parameters_name[-1]}/"
+                    os.makedirs(path_depth, exist_ok=True)
+                    torch.save(pred, path_depth + f"{name}.pt")
 
     return avg, is_best
 
@@ -399,6 +412,7 @@ def main():
             args.feature_mode = args_new.feature_mode
             args.test_mode = args_new.test_mode
             args.draw_features_rgb = args_new.draw_features_rgb
+            args.depth_save = args_new.depth_save
             is_eval = True
             print("Completed.")
         else:

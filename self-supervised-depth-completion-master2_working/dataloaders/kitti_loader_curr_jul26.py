@@ -577,6 +577,8 @@ class KittiDepth(data.Dataset):
             for key, val in candidates.items() if val is not None
         }
 
+        items['d_path']=self.paths['d'][index]
+
         return items
 
     def __len__(self):
