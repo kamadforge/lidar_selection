@@ -343,7 +343,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
         # save log and checkpoint
-        every=990 if mode == "val" else 200
+        every=999 if mode == "val" else 200
 
         if i % every ==0:
 
