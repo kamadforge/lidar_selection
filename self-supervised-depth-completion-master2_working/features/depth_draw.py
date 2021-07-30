@@ -54,19 +54,20 @@ def draw(type_feature, rgb, depth, switches_2d_argsort, shape_1, run_info, iter=
             ma2.save(f"{features_image_path}/squares_{tim}_{result.rmse:n}.jpg")
         print("saving")
     elif type_feature == "lines":
-        print_square_num = 20
+        print_square_num = 65
         r = 1
-        parameter_mask = np.load("../kitti_pixels_to_lines.npy", allow_pickle=True)
+        parameter_mask = np.load("kitti_pixels_to_lines_masks.npy", allow_pickle=True)
 
         # for m in range(10,50):
         #     im = Image.fromarray(parameter_mask[m]*155)
         #     im = im.convert('1')  # convert image to black and white
         #     im.save(f"switches_photos/lala_{m}.jpg")
 
-        for ii in range(print_square_num):
+        for ii in switches_2d_argsort:
             points = parameter_mask[ii]
             y = np.where(points == 1)[0]
             x = np.where(points == 1)[1]
+            print(f"Lines {ii} has {len(y)}")
 
             for p in range(len(x)):
                 img1.ellipse((x[p] - r, y[p] - r, x[p] + r, y[p] + r), fill=(255, 0, 0, 0))
