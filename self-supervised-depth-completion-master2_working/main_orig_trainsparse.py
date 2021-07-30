@@ -112,6 +112,7 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="None", choices=["sq", "lines", "None"])
+parser.add_argument('--training_sparse_opt', default="latin")
 
 
 args = parser.parse_args()
@@ -170,7 +171,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     print("\nTraining")
     prune_type = "sq"  # sq, vlines, nothing
-    square_choice = "most"
+    square_choice = args.training_sparse_opt
     if prune_type=="sq":
         print(f"Features: squares\n Square choice: {square_choice}")
 
@@ -386,7 +387,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 'best_result': logger.best_result,
                 'optimizer': optimizer.state_dict(),
                 'args': args,
-            }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
+            }, is_best, epoch, logger.output_directory, args.type_feature, i, every, "scratch")
 
     return avg, is_best
 
@@ -486,7 +487,7 @@ def main():
             'best_result': logger.best_result,
             'optimizer' : optimizer.state_dict(),
             'args' : args,
-        }, is_best, epoch, logger.output_directory, args.type_feature)
+        }, is_best, epoch, logger.output_directory, args.type_feature, "scratch")
 
 
 if __name__ == '__main__':
