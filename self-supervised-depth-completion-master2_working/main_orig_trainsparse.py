@@ -374,7 +374,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_save_pred(mode, i, pred, epoch)
 
         every=100
-        if i % 100 ==0: #every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
+        if i % 500 ==0: #every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
