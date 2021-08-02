@@ -136,7 +136,7 @@ parser.add_argument('--depth_save', default=1, type=int)
 parser.add_argument('--seed', default=120, type=int)
 
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="switch")
+parser.add_argument('--test_mode', default="spaced")
 parser.add_argument('--feature_mode', default='local')
 parser.add_argument('--feature_num', default=20, type=int)
 

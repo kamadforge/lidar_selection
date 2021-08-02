@@ -251,6 +251,9 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
             np.random.seed(seed) # comment to get local random
             print("Seed: ", seed)
         lines = np.random.choice(lines_num, lines_selected, replace=False)
+    elif test_mode == "spaced":
+        lines = np.arange(0,lines_num, int(lines_num/lines_selected))
+        lines = np.append(lines, 64)
     elif test_mode == "most":
 
         # all points in a mask
