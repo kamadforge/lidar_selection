@@ -20,6 +20,8 @@ import helper
 from inverse_warp import Intrinsics, homography_from
 from features.depth_manipulation import depth_adjustment, depth_adjustment_lines
 from features.depth_draw import draw
+import vis_utils
+
 
 import numpy as np
 
@@ -126,7 +128,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 
-parser.add_argument('--depth_adjust', default=0, type=int) #if we use all depth or subset of depth feature
+parser.add_argument('--depth_adjust', default=1, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 
@@ -136,7 +138,7 @@ parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--test_mode', default="switch")
 parser.add_argument('--feature_mode', default='local')
-parser.add_argument('--feature_num', default=10, type=int)
+parser.add_argument('--feature_num', default=20, type=int)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 
@@ -241,8 +243,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         # adjust depth for features
         depth_adjust=args.depth_adjust
-        adjust_features=False
-        if depth_adjust and args.use_d and args.evaluate:
+        adjust_features=False # normalize the number of points in a feature
+        if depth_adjust and args.use_d:
             if args.type_feature == "sq":
                 if args.use_rgb:
 
@@ -372,16 +374,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 draw(args.type_feature, batch_data['rgb'], batch_data['d'], features, 65, run_info, i, result)
         if args.depth_save and args.evaluate:
             name=os.path.split(sparse_depth_pathname)[-1]
+            parameters_name = args.evaluate.split(os.sep)
             if depth_adjust:
-                    parameters_name = args.evaluate.split(os.sep)
                     path_depth = f"depth_predicted/{args.type_feature}/{args.feature_mode}/{args.test_mode}/{parameters_name[-2]}/{parameters_name[-1]}/"
-                    os.makedirs(path_depth, exist_ok=True)
-                    torch.save(pred, path_depth+f"{name}.pt")
             else:
-                    parameters_name = args.evaluate.split(os.sep)
                     path_depth = f"depth_predicted/full/{parameters_name[-2]}/{parameters_name[-1]}/"
-                    os.makedirs(path_depth, exist_ok=True)
-                    torch.save(pred, path_depth + f"{name}.pt")
+            os.makedirs(path_depth, exist_ok=True)
+            #torch.save(pred, path_depth + f"{name}.pt")
+            depth_predicted = pred.squeeze().detach().cpu().numpy()
+            depth_pred_color = vis_utils.depth_colorize(depth_predicted)
+            vis_utils.save_depth_as_uint16png(depth_pred_color, path_depth + f"{name}_im_color.png")
 
     return avg, is_best
 
