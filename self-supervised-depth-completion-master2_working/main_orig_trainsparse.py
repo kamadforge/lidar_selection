@@ -15,7 +15,6 @@ from scipy.stats import binned_statistic_2d
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
                     '--workers',
@@ -39,7 +38,7 @@ parser.add_argument('-c',
                     default='l2',
                     choices=criteria.loss_names,
                     help='loss function: | '.join(criteria.loss_names) +
-                    ' (default: l2)')
+                         ' (default: l2)')
 parser.add_argument('-b',
                     '--batch-size',
                     default=1,
@@ -114,7 +113,6 @@ parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="None", choices=["sq", "lines", "None"])
 parser.add_argument('--training_sparse_opt', default="latin")
 
-
 args = parser.parse_args()
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
@@ -132,6 +130,7 @@ cuda = torch.cuda.is_available() and not args.cpu
 print(torch.cuda.get_device_name(torch.cuda.current_device()))
 if cuda:
     import torch.backends.cudnn as cudnn
+
     cudnn.benchmark = True
     device = torch.device("cuda")
 else:
@@ -140,7 +139,7 @@ print("=> using '{}' for computation.".format(device))
 
 # define loss functions
 depth_criterion = criteria.MaskedMSELoss() if (
-    args.criterion == 'l2') else criteria.MaskedL1Loss()
+        args.criterion == 'l2') else criteria.MaskedL1Loss()
 photometric_criterion = criteria.PhotometricLoss()
 smoothness_criterion = criteria.SmoothnessLoss()
 
@@ -172,7 +171,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     print("\nTraining")
     prune_type = "sq"  # sq, vlines, nothing
     square_choice = args.training_sparse_opt
-    if prune_type=="sq":
+    if prune_type == "sq":
         print(f"Features: squares\n Square choice: {square_choice}")
 
     for i, batch_data in enumerate(loader):
@@ -188,11 +187,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         if prune_type == "vlines":
             np.random.seed(10)
-            lines_unmasked=np.random.choice(352,20, replace=False)
+            lines_unmasked = np.random.choice(352, 20, replace=False)
             lines_unmasked = np.arange(352)
-            lines_all=np.arange(352)
+            lines_all = np.arange(352)
             lines_masked = [x for x in lines_all if x not in lines_unmasked]
-            batch_data['d'][:, :, lines_masked]=0
+            batch_data['d'][:, :, lines_masked] = 0
             print(batch_data['d'].shape)
             print("lines unmasked", lines_unmasked)
 
@@ -201,93 +200,94 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             A = np.load("ranks/switches_2D_equal_iter_390.npy", allow_pickle=True)
             # with np.printoptions(precision=5):
             #     print("switches", A)
-            #get the ver and hor coordinates of the most important squares
+            # get the ver and hor coordinates of the most important squares
             A_2d_argsort = np.argsort(A, None)[::-1]
-            if square_choice=="most":
+            if square_choice == "most":
                 squares_top_file = "ranks/sq/global/squares_most.npy"
                 A_2d_argsort = np.load(squares_top_file)[::-1]
             ver = np.floor(A_2d_argsort // A.shape[1])
             hor = A_2d_argsort % A.shape[1]
             A_list = np.stack([ver, hor]).transpose()
             square_size = 40
-            squares_top_num = 20
+            squares_top_num = 50
 
-            if square_choice=="full":
+            if square_choice == "full":
                 squares_top = A_list
 
-            if square_choice=="most":
-                squares_top = A_list[:20]
+            if square_choice == "most":
+                squares_top = A_list[:squares_top_num]
 
-            if square_choice=="best_sw":
-                squares_top = A_list[:20]
+            if square_choice == "best_sw":
+                squares_top = A_list[:squares_top_num]
 
-            if square_choice=="latin_sw":
-                #creating latin grid (with big squares/blocks)
-                hor_large = np.linspace(0,30,7)
+            if square_choice == "latin_sw":
+                # creating latin grid (with big squares/blocks)
+                hor_large = np.linspace(0, 30, 7)
                 ver_larger = np.arange(10)
                 all_squares = np.arange(len(A_list))
-                bins_2d_latin= binned_statistic_2d(ver, hor, all_squares, 'min', bins=[ver_larger, hor_large])
+                bins_2d_latin = binned_statistic_2d(ver, hor, all_squares, 'min', bins=[ver_larger, hor_large])
                 bins_2d_latin.statistic
-                best_latin  = bins_2d_latin.statistic[-3:].flatten().astype(int)
+                best_latin = bins_2d_latin.statistic[-3:].flatten().astype(int)
                 best_latin_coors = list(A_list[best_latin])
                 for i1 in A_list:
-                    elem_in = False #check if the block already contains a small square
+                    elem_in = False  # check if the block already contains a small square
                     for i2 in best_latin_coors:
-                        if i1[0]==i2[0] and i1[1]==i2[1] :
+                        if i1[0] == i2[0] and i1[1] == i2[1]:
                             elem_in = True
                     if not elem_in:
                         best_latin_coors.append(i1)
-                    if len(best_latin_coors)==20:
+                    if len(best_latin_coors) == squares_top_num:
                         break;
                 squares_top = np.array(best_latin_coors)
 
-            elif square_choice=="latin":
+            elif square_choice == "latin":
                 np.random.seed(12)
                 squares_latin_evenlyspaced = []
                 # create blocks, choose k random blocks and have fixed first block
                 hor_large = np.linspace(0, 30, 7)
                 ver_large = np.arange(10)
                 # random sample from positive blocks
-                hor_large_rand = np.random.choice(len(hor_large), 20)
-                ver_large_rand  = np.random.choice([6,7,8], 20)
+                hor_large_rand = np.random.choice(len(hor_large), squares_top_num)
+                ver_large_rand = np.random.choice([6, 7, 8], squares_top_num)
                 # selecting a small square from A_list with given corrdinates within a block
                 for j in range(len(hor_large_rand)):
-                    elem = np.where((A_list[:, 0]== ver_large_rand[j]) & (A_list[:, 1] == hor_large[hor_large_rand[j]]))[0][0]
+                    elem = \
+                    np.where((A_list[:, 0] == ver_large_rand[j]) & (A_list[:, 1] == hor_large[hor_large_rand[j]]))[0][0]
                     squares_latin_evenlyspaced.append(elem)
                 squares_top = A_list[squares_latin_evenlyspaced]
 
 
-            elif square_choice=="random_all":
+            elif square_choice == "random_all":
                 np.random.seed(12)
-                rand_idx = np.random.choice(len(A_list), 20)
+                rand_idx = np.random.choice(len(A_list), squares_top_num)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
 
-            elif square_choice=="random_pos": # from squares which include depth points
+            elif square_choice == "random_pos":  # from squares which include depth points
                 np.random.seed(12)
-                #choose from the squares which have roughly positive number of depth points
-                rand_idx = np.random.choice(len(A_list[:93]), 20)
+                # choose from the squares which have roughly positive number of depth points
+                rand_idx = np.random.choice(len(A_list[:93]), squares_top_num)
                 print(rand_idx)
                 squares_top = A_list[rand_idx]
 
             # after selecting indices of the squares save in squares_top
-            squares_top_scaled = np.array(squares_top)* square_size
+            squares_top_scaled = np.array(squares_top) * square_size
             mask = np.zeros((352, 1216))
             bin_ver = np.arange(0, 352, square_size)
             bin_ver = np.append(bin_ver, oheight)
             bin_hor = np.arange(0, 1216, square_size)
             bin_hor = np.append(bin_hor, owidth)
             # filling in the mask with selected squares up to squares_top_num (e.g. 20)
-            #print("Number of squares selected: ", len(squares_top))
-            #print(squares_top)
-            for it in range(len(squares_top)): #in all but full should be equal to squares_top_num
+            # print("Number of squares selected: ", len(squares_top))
+            # print(squares_top)
+            for it in range(len(squares_top)):  # in all but full should be equal to squares_top_num
                 ver = int(squares_top[it][0])
                 hor = int(squares_top[it][1])
-                #print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
-                mask[bin_ver[ver]:bin_ver[ver+1], bin_hor[hor]:bin_hor[hor+1]]=1
+                # print("ver", bin_ver[ver], bin_ver[ver+1], "hor", bin_hor[hor], bin_hor[hor+1] )
+                mask[bin_ver[ver]:bin_ver[ver + 1], bin_hor[hor]:bin_hor[hor + 1]] = 1
 
             aaa1 = batch_data['d'].detach().cpu().numpy()
-            batch_data['d']=torch.einsum("abcd, cd->abcd", [batch_data['d'], torch.Tensor(mask).to(device)])
+            batch_data['d'] = torch.einsum("abcd, cd->abcd", [batch_data['d'], torch.Tensor(mask).to(device)])
             aaa2 = batch_data['d'].detach().cpu().numpy()
             #
             # # from PIL import Image
@@ -295,14 +295,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # # #img.save('my.png')
             # # img.show()
 
-
         pred = model(batch_data)
-        #im = batch_data['d'].detach().cpu().numpy()
-        #im_sq = im.squeeze()
-        #plt.figure()
-        #plt.imshow(im_sq)
-        #plt.show()
-        #for i in range(im_sq.shape[0]):
+        # im = batch_data['d'].detach().cpu().numpy()
+        # im_sq = im.squeeze()
+        # plt.figure()
+        # plt.imshow(im_sq)
+        # plt.show()
+        # for i in range(im_sq.shape[0]):
         #    print(f"{i} - {np.sum(im_sq[i])}")
 
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
@@ -344,7 +343,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                               batch_data['r_mat'],
                                               batch_data['t_vec'], intrinsics_)
                     photometric_loss += photometric_criterion(
-                        rgb_curr_, warped_, mask_) * (2**(scale - num_scales))
+                        rgb_curr_, warped_, mask_) * (2 ** (scale - num_scales))
 
             # Loss 3: the depth smoothness loss
             smooth_loss = smoothness_criterion(pred) if args.w2 > 0 else 0
@@ -373,8 +372,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                                                    epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-        every=100
-        if i % 500 ==0: #every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
+        every = 100
+        if i % 500 == 0:  # every 100 batches/images (before it was after the entire dataset - two tabs/on if statement)
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
@@ -481,13 +480,13 @@ def main():
                 epoch)  # train for one epoch
         result, is_best = iterate("val", args, val_loader, model, None, logger,
                                   epoch)  # evaluate on validation set
-        helper.save_checkpoint({ # save checkpoint
+        helper.save_checkpoint({  # save checkpoint
             'epoch': epoch,
             'model': model.module.state_dict(),
             'best_result': logger.best_result,
-            'optimizer' : optimizer.state_dict(),
-            'args' : args,
-        }, is_best, epoch, logger.output_directory, args.type_feature, "scratch")
+            'optimizer': optimizer.state_dict(),
+            'args': args,
+        }, is_best, epoch, logger.output_directory, args.type_feature)
 
 
 if __name__ == '__main__':
