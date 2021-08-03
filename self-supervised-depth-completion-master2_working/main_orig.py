@@ -137,7 +137,7 @@ parser.add_argument('--seed', default=120, type=int)
 
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--test_mode', default="spaced")
-parser.add_argument('--feature_mode', default='local')
+parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=20, type=int)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")

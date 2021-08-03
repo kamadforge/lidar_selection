@@ -170,7 +170,9 @@ if args.use_pose:
 else:
     args.w1, args.w2 = 0, 0
 
+
 args.save_checkpoint_path = ""
+
 
 print(args)
 
