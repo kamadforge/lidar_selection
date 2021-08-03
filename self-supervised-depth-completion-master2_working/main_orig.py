@@ -114,12 +114,12 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--depth_adjust', default=1, type=int)
+parser.add_argument('--depth_adjust', default=0, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--seed', default=120, type=int)
 
 parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="switch")
+parser.add_argument('--test_mode', default="full")
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=10, type=int)
 
@@ -135,6 +135,9 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
+
+if args.test_mode == "full":
+    args.training_sparse_opt = "full"
 
 if args.evaluate == "1":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
