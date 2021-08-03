@@ -141,6 +141,7 @@ parser.add_argument('--feature_mode', default='local')
 parser.add_argument('--feature_num', default=20, type=int)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
+parser.add_argument('--rank_file_global_sq')
 
 parser.add_argument('--draw_features_rgb', default=1)
 args = parser.parse_args()
@@ -415,6 +416,7 @@ def main():
             args.test_mode = args_new.test_mode
             args.draw_features_rgb = args_new.draw_features_rgb
             args.depth_save = args_new.depth_save
+            args.rank_file_global_sq = args_new.rank_file_global_sq
             is_eval = True
             print("Completed.")
         else:

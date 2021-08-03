@@ -18,6 +18,8 @@ from PIL import Image, ImageDraw
 from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNetQLines, DepthCompletionNetQSquare, DepthCompletionNetQSquareNet, DepthCompletionNetQLinesNet
 
+
+
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -153,7 +155,7 @@ if args.resume == "1":
 elif args.resume == "2":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 
-test_features_in_checkpoint(args.resume, args.input)
+#test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)
@@ -168,7 +170,7 @@ if args.use_pose:
 else:
     args.w1, args.w2 = 0, 0
 
-
+args.save_checkpoint_path = ""
 
 print(args)
 
@@ -345,6 +347,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
 
         gpu_time = time.time() - start
+
 
         # counting pixels in each bin
         #binned_pixels = np.load("value.npy", allow_pickle=True)
