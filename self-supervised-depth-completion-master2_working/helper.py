@@ -221,32 +221,37 @@ def adjust_learning_rate(lr_init, optimizer, epoch):
         param_group['lr'] = lr
     return lr
 
-def get_save_path(epoch, output_directory, type_feature, i, best, qnet=None):
+def get_save_path(epoch, output_directory, type_feature, test_mode, feature_num, feature_mode, depth_adjust, i, best):
 
-    if qnet=="scratch" or qnet==1:
-        checkpoint_filename = os.path.join(output_directory, f'checkpoint_qnet-{str(epoch)}_i_{i}_typefeature_{type_feature}.pth.tar')
-        if best:
-            checkpoint_filename = os.path.join(output_directory, f'checkpoint_qnet-{str(epoch)}_i_{i}_typefeature_{type_feature}_best.pth.tar')
-    else:
-        checkpoint_filename = os.path.join(output_directory, f'{type_feature}/global/checkpoint_qnet-{str(epoch)}_i_{i}_typefeature_{type_feature}.pth.tar')
+    info_str = ""
+    if depth_adjust:
+        for var in [type_feature, test_mode, feature_num, feature_mode]:
+            if var is not None:
+                info_str+=f"_{var}"
+
+    checkpoint_filename = os.path.join(output_directory, f'checkpoint_{str(epoch)}_i_{i}_{info_str}.pth.tar')
+    if best:
+        checkpoint_filename = os.path.join(output_directory, f'checkpoint_{str(epoch)}_i_{i}_{info_str}_best.pth.tar')
+
+
 
 
     return checkpoint_filename
 
 
-def save_checkpoint(state, is_best, epoch, output_directory, type_feature, i=0, every=50, qnet=None):
+def save_checkpoint(state, is_best, epoch, output_directory, type_feature=None, test_mode=None, feature_num=None, feature_mode=None, depth_adjust=0, i=0, every=50, qnet=None):
 
-    checkpoint_filename = get_save_path(epoch, output_directory, type_feature, i, False, qnet)
+    checkpoint_filename = get_save_path(epoch, output_directory, type_feature, test_mode, feature_num, feature_mode, depth_adjust, i, False)
     torch.save(state, checkpoint_filename)
     print(f"Saved checkpoint to {checkpoint_filename}")
 
-    prev_checkpoint_filename = get_save_path(epoch, output_directory, type_feature, i - every, False, qnet)
-    if os.path.exists(prev_checkpoint_filename) and ((i - every) == 0 or ((i - every) % 10000 != 0) or ((i - every) % 85800 != 0)):
+    prev_checkpoint_filename = get_save_path(epoch, output_directory, type_feature, test_mode, feature_num, feature_mode, depth_adjust, i - every, False)
+    if os.path.exists(prev_checkpoint_filename) and ((i - every) == 0 or ((i - every) % 40000 != 0) or ((i - every) % 85800 != 0)):
         os.remove(prev_checkpoint_filename)
         print(f"Removed checkpoint to: {prev_checkpoint_filename}")
 
     if is_best:
-        checkpoint_best_filename = get_save_path(epoch, output_directory, type_feature, i, is_best, qnet)
+        checkpoint_best_filename = get_save_path(epoch, output_directory, type_feature, test_mode, feature_num, feature_mode, depth_adjust, i, is_best)
         torch.save(state, checkpoint_best_filename)
         print(f"Saved best checkpoint to {checkpoint_best_filename}")
         if "prev_best_checkpoint_filename" not in globals():
