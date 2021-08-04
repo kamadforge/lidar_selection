@@ -314,6 +314,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     table_is=np.zeros(400)
     for i, batch_data in enumerate(loader):
 
+        sparse_depth_pathname = batch_data['d_path'][0]
+        print(sparse_depth_pathname)
+        del batch_data['d_path']
         print ("i: ", i)
         start = time.time()
         batch_data = {
