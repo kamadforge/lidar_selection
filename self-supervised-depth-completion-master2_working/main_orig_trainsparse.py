@@ -113,6 +113,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="None", choices=["sq", "lines", "None"])
 parser.add_argument('--training_sparse_opt', default="latin")
+parser.add_argument('--feat_num', default=10, type=int)
 
 
 args = parser.parse_args()
@@ -211,7 +212,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             hor = A_2d_argsort % A.shape[1]
             A_list = np.stack([ver, hor]).transpose()
             square_size = 40
-            squares_top_num = 150
+            squares_top_num = args.feat_num
 
             if square_choice=="full":
                 squares_top = A_list
