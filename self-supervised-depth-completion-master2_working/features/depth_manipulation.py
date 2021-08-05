@@ -50,9 +50,9 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
     ver = np.floor(A_2d_argsort // A.shape[1])
     hor = A_2d_argsort % A.shape[1]
     coord_sorted = np.stack([ver, hor]).transpose()
-    print("Squares by the most points")
-    print(coord_sorted[-sq_selected:])
-    print(A_2d_argsort[-sq_selected:]) # argsort of the num of cumulative points
+    #print("Squares by the most points")
+    #print(coord_sorted[-sq_selected:])
+    #print(A_2d_argsort[-sq_selected:]) # argsort of the num of cumulative points
     print("num of points: ", A_2d_sort[-sq_selected:])
 
     # choose ranks for the squares
