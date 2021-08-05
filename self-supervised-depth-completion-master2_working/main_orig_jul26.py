@@ -444,7 +444,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     'best_result': logger.best_result,
                     'optimizer': optimizer.state_dict(),
                     'args': args,
-                }, is_best, epoch, logger.output_directory, args.type_feature, i, every)
+                }, is_best, epoch, logger.output_directory, args.type_feature, args.test_mode, args.feature_num, args.feature_mode, args.depth_adjust, i, every, "scratch")
 
         # draw features
         # run_info = [args.type_feature, alg_mode, feat_mode, model_orig]
@@ -563,7 +563,7 @@ def main():
             'best_result': logger.best_result,
             'optimizer' : optimizer.state_dict(),
             'args' : args,
-        }, is_best, epoch, logger.output_directory, args.type_feature)
+        }, is_best, epoch, logger.output_directory, args.type_feature, args.test_mode, args.feature_num, args.feature_mode, args.depth_adjust)
 
 
 if __name__ == '__main__':
