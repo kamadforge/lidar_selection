@@ -135,6 +135,9 @@ parser.add_argument('--every', default=30, type=int) #saving checkpoint every k 
 parser.add_argument('--save_checkpoint_bool', default=0)
 args = parser.parse_args()
 
+
+
+
 if args.instancewise:
     bif_mode = "local"
 else:
@@ -155,7 +158,7 @@ if args.resume == "1":
 elif args.resume == "2":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 
-#test_features_in_checkpoint(args.resume, args.input)
+test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)
@@ -417,7 +420,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             # global_ranks_path = lambda \
             #         ii: f"ranks/{args.type_feature}/global/{folder_and_name[0]}/Ss_val_{folder_and_name[1]}_iter_{ii}.npy"
 
-            folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, i_total_train, qnet=False)
+            folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, "switch_train", -1, bif_mode, 0, i_total_train, False)
             parameters_name = folder_and_name.split(os.sep)[-4]
             checkpoint_name = args.resume.split(os.sep)[-1]
 
