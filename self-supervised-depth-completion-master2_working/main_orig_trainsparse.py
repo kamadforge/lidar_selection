@@ -123,6 +123,10 @@ args.result = os.path.join('..', 'results')
 args.use_rgb = ('rgb' in args.input) or args.use_pose
 args.use_d = 'd' in args.input
 args.use_g = 'g' in args.input
+
+#os.environ["CUDA_VISIBLE_DEVICES"]=""
+#torch.cuda.is_available = lambda : False
+
 if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
@@ -138,6 +142,8 @@ if cuda:
 else:
     device = torch.device("cpu")
 print("=> using '{}' for computation.".format(device))
+
+
 
 # define loss functions
 depth_criterion = criteria.MaskedMSELoss() if (
