@@ -30,6 +30,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 print(sys.version)
+print(torch.cuda.get_device_name(torch.cuda.current_device()))
+
 
 #arguments
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
@@ -157,8 +159,14 @@ if args.resume == "1":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.resume == "2":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+    
+t = torch.cuda.get_device_properties(0).total_memory
+r = torch.cuda.memory_reserved(0)
+a = torch.cuda.memory_allocated(0)
+f = r-a  # free inside reserved
+print(f"total device: {t}, reserved: {r}, allocated: {a}, free: {f}.")
 
-#test_features_in_checkpoint(args.resume, args.input)
+test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)
@@ -233,6 +241,8 @@ def zero_params(model):
         # if ("bn" in name) and ("running_var" in name):
         #     param.data[combinationss[it - 1]] = 0
 
+
+#############################################################################
 
 def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100, split_it=0):
     block_average_meter = AverageMeter()
@@ -401,7 +411,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
 
         # Global training
-        if ((i_total % args.every ==0 or i ==len(loader)-1 ) and mode=="train" and not args.instancewise and model.module.phi is not None):
+        if ((i_total % args.every ==0 or i ==len(loader)-1 ) and i_total != 0 and mode=="train" and not args.instancewise and model.module.phi is not None):
 
             np.set_printoptions(precision=6)
 
@@ -565,6 +575,12 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
     del batch_data
     return avg, is_best
 
+
+
+
+
+
+###############################################################
 
 def main():
     global args

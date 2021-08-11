@@ -143,7 +143,7 @@ parser.add_argument('--feature_num', default=20, type=int)
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 parser.add_argument('--rank_file_global_sq')
 
-parser.add_argument('--draw_features_rgb', default=1)
+parser.add_argument('--draw_features_rgb', default=0)
 args = parser.parse_args()
 
 if args.evaluate == "1":
@@ -208,6 +208,8 @@ if args.use_pose:
     if cuda:
         kitti_intrinsics = kitti_intrinsics.cuda()
 
+
+#########################################################################################
 
 def iterate(mode, args, loader, model, optimizer, logger, epoch):
     block_average_meter = AverageMeter()
@@ -349,9 +351,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # save log and checkpoint
         every=999 if mode == "val" else 200 #200
 
-        if i % every ==0:
+        if i % every ==0 and i!=0:
 
-            print("saving")
+            print(f"test settings (main_orig eval): {args.type_feature} {args.test_mode} {args.feature_mode} {args.feature_num}")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
@@ -388,6 +390,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     return avg, is_best
 
+
+############################################################################
 
 def main():
     global args

@@ -330,6 +330,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # adjust depth for features
         depth_adjust=args.depth_adjust
         adjust_features=False
+        
+        
         if depth_adjust and args.use_d:
             if args.type_feature == "sq":
                 if args.use_rgb:
@@ -426,10 +428,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
         # save log and checkpoint
-        every=990 if mode == "val" else 200
-        if i % every ==0:
+        every=999 if mode == "val" else 200
+        if i % every ==0 and i!=0:
 
-            print("saving")
+            print(f"test settings (main_orig eval): {args.type_feature} {args.test_mode} {args.feature_mode} {args.feature_num}")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
