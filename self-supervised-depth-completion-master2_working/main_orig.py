@@ -235,6 +235,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         print(sparse_depth_pathname)
         del batch_data['d_path']
         print ("i: ", i)
+        print(f"depth (sparse) points: {len(torch.where(batch_data['d']>0)[0])}")
+        print(f"gt depth (dense) points: {len(torch.where(batch_data['gt'] > 0)[0])}")
         start = time.time()
         batch_data = {
             key: val.to(device)
@@ -388,6 +390,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             depth_pred_color = vis_utils.depth_colorize(depth_predicted)
             vis_utils.save_depth_as_uint16png(depth_pred_color, path_depth + f"{name}_im_color.png")
 
+        print('\n'+'*'*15+'\n\n')
     return avg, is_best
 
 

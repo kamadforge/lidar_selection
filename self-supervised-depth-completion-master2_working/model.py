@@ -814,6 +814,7 @@ class DepthCompletionNetQSquare(nn.Module):
 
         # first layer
         if 'd' in self.modality:
+            print(f"depth (sparse) input to the network: {len(torch.where(x['d']>0)[0])}")
             conv1_d = self.conv1_d(output)
         if 'rgb' in self.modality:
             conv1_img = self.conv1_img(x['rgb'])
