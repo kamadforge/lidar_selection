@@ -273,6 +273,7 @@ def depth_read(filename, depth_mode, type_feature):
                 ver = int(np.floor(coords_new[i][1]))
                 depth_binary[ver, hor] = pt_dep[i]
         depth = depth_binary
+        print("sparse depth from binary")
         depth_points = np.where(depth > 0)
 
         if type_feature=="sq":

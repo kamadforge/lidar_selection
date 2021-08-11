@@ -184,6 +184,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         }
         gt = batch_data[
             'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+        print(f"gt (dense): {len(torch.where(gt>0)[0])}")
+        print(f"d (sparse): {len(torch.where(batch_data['d']>0)[0])}")
         data_time = time.time() - start
         start = time.time()
         
