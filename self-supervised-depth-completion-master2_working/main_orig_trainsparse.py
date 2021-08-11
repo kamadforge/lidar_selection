@@ -111,7 +111,7 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="None", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="None", choices=["sq", "hlines", "lines", "None"])
 parser.add_argument('--training_sparse_opt', default="latin")
 parser.add_argument('--feat_num', default=10, type=int)
 
@@ -177,7 +177,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         lr = 0
 
     print("\nTraining")
-    prune_type = "sq"  # sq, vlines, nothing
+    prune_type = args.type_feature  # sq, vlines, nothing
     square_choice = args.training_sparse_opt
     if prune_type=="sq":
         print(f"Features: squares\n Square choice: {square_choice}")
@@ -196,15 +196,15 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         start = time.time()
         
 
-        if prune_type == "vlines":
+        if prune_type == "hlines":
             np.random.seed(10)
-            lines_unmasked=np.random.choice(352,20, replace=False)
-            lines_unmasked = np.arange(352)
+            lines_unmasked=np.random.choice(352,args.feat_num, replace=False)
+            #lines_unmasked = np.arange(352)
             lines_all=np.arange(352)
             lines_masked = [x for x in lines_all if x not in lines_unmasked]
             batch_data['d'][:, :, lines_masked]=0
-            print(batch_data['d'].shape)
-            print("lines unmasked", lines_unmasked)
+            #print(batch_data['d'].shape)
+            #print("lines unmasked", lines_unmasked)
 
 
         elif prune_type == "sq":

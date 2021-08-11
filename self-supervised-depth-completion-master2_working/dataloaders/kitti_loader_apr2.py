@@ -267,7 +267,7 @@ def depth_read(filename, depth_mode, type_feature):
         depth_binary = np.zeros_like(depth)
         for i in range(coords_new.shape[0]):
             # selects from all depth points, so that we have the same num for each line
-            if type_feature=="sq" or type_feature=="None" or (sel_line_id[i]>-1 and type_feature=="lines"):
+            if type_feature=="sq" or type_feature=="None" or type_feature=="hlines" or (sel_line_id[i]>-1 and type_feature=="lines"):
                 hor = int(np.floor(coords_new[i][0]))
                 hor = int(np.floor(coords_new[i][0]))
                 ver = int(np.floor(coords_new[i][1]))
