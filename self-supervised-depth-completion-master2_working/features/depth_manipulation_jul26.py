@@ -53,7 +53,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, rank_file_glob
     #print("Squares by the most points")
     #print(coord_sorted[-sq_selected:])
     #print(A_2d_argsort[-sq_selected:]) # argsort of the num of cumulative points
-    print("num of points: ", A_2d_sort[-sq_selected:])
+    #print("num of points: ", A_2d_sort[-sq_selected:])
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
@@ -107,7 +107,8 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, rank_file_glob
             squares_local = np.load(f"ranks/sq/instance/Ss_val_argsort_{name}.npy")
             squares = squares_local[iter, -sq_selected:]
 
-    print(f"Squares used {test_mode}: ", squares)
+    if (feature_mode == "global" and iter == 999) or (feature_mode == "local" and (iter == 999 or iter == 998)):
+        print(f"Squares used {test_mode}: ", squares)
 
     run_info=[feat_choice, feature_mode, test_mode, model_orig]
 

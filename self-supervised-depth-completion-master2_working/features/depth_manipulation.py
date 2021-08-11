@@ -59,7 +59,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
     #print("Squares by the most points")
     #print(coord_sorted[-sq_selected:])
     #print(A_2d_argsort[-sq_selected:]) # argsort of the num of cumulative points
-    print("num of points: ", A_2d_sort[-sq_selected:])
+    #print("num of points: ", A_2d_sort[-sq_selected:])
 
 
     # choose ranks for the squares
@@ -114,7 +114,9 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
             squares_local = np.load(f"ranks/sq/instance/Ss_val_argsort_{name}.npy")
             squares = squares_local[iter, -sq_selected:]
 
-    print(f"Squares used {test_mode}: ", squares)
+    if (feature_mode == "global" and iter == 999) or (feature_mode == "local" and (iter == 999 or iter == 998)):
+        print(f"Squares used {test_mode}: ", squares)
+
 
     run_info=[feat_choice, feature_mode, test_mode, model_orig]
 
@@ -245,7 +247,13 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
 
     #test_mode = "most"
     #feature_mode = "local"
-
+    
+    if "one" in test_mode:
+        lines = [int(test_mode[3:])]
+    elif "two" in test_mode:
+        lines = [int(a) for a in test_mode[4:-1].split(",")]
+    elif "custom" in test_mode:
+        lines = [64,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49]
     if test_mode == "random":
         if feature_mode == "global":
             np.random.seed(seed) # comment to get local random
