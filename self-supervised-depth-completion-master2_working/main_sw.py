@@ -130,7 +130,7 @@ parser.add_argument(
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-parser.add_argument('--type_feature', default="sq", choices=["sq", "lines", "None"])
+parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--instancewise', default=0, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--every', default=30, type=int) #saving checkpoint every k images
@@ -166,7 +166,7 @@ a = torch.cuda.memory_allocated(0)
 f = r-a  # free inside reserved
 print(f"total device: {t}, reserved: {r}, allocated: {a}, free: {f}.")
 
-test_features_in_checkpoint(args.resume, args.input)
+#test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)

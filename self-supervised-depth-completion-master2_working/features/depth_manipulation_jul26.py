@@ -216,7 +216,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, rank_file_glob
 
 
 
-def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, model_orig, seed=116):
+def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, rank_file_global, iter, model_orig, seed=116):
 
     depth = depth.detach().cpu().numpy().squeeze()
     masks = np.load("kitti_pixels_to_lines_masks.npy")
@@ -269,7 +269,8 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
     elif test_mode == "switch":
         if feature_mode == "global":
             #lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/switches_argsort_2D_equal_lines_iter_1040.npy") #gd 16600
-            lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/9i/Ss_val_checkpoint_qnet-10_i_3145_typefeature_lines.pth.tar_ep_11_it_999.npy") #9i
+            #lines = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/9i/Ss_val_checkpoint_qnet-10_i_3145_typefeature_lines.pth.tar_ep_11_it_999.npy") #9i
+            lines = np.load(rank_file_global)
             lines = np.argsort(lines)
             #lines = np.load(f"../ranks/switches_argsort_2D_equal_lines_iter_1040.npy")
             lines = lines[ lines != 0]
