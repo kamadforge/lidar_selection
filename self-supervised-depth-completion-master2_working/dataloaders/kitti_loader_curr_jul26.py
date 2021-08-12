@@ -552,8 +552,13 @@ class KittiDepth(data.Dataset):
 
     def __getitem__(self, index):
         rgb, sparse, target, rgb_near = self.__getraw__(index)
+        print(f"sparse: {len(np.where(sparse)[0] > 0)}")
+        print(f"dense gt: {len(np.where(target)[0] > 0)}")
         rgb, sparse, target, rgb_near = self.transform(rgb, sparse, target,
                                                        rgb_near, self.args)
+        print("\ntransform")
+        print(f"sparse: {len(np.where(sparse)[0] > 0)}")
+        print(f"dense gt: {len(np.where(target)[0] > 0)}")
         r_mat, t_vec = None, None
         if self.split == 'train' and self.args.use_pose:
             success, r_vec, t_vec = get_pose_pnp(rgb, rgb_near, sparse, self.K)

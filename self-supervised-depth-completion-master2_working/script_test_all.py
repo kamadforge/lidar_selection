@@ -6,7 +6,7 @@ import numpy as np
 
 
 
-feat_number=32
+feat_number=11
 
 def test_switch(checkpoint_path, rank_file, input_form):
 
@@ -19,8 +19,8 @@ def test_switch(checkpoint_path, rank_file, input_form):
 
 def test_features_in_checkpoint(checkpoint_path, input_form):
 
-    #test_modes = [ "spaced", "most", "random"]
-    test_modes = ["custom"]
+    test_modes = [ "spaced", "most", "random"]
+    #test_modes = ["custom"]
     #test_modes = []
     #for i in range(65):
     #    test_modes.append("one"+str(i))
@@ -31,7 +31,7 @@ def test_features_in_checkpoint(checkpoint_path, input_form):
     
         
     feat_modes = ["global", "local"]
-    feat_modes = ["global"]
+    #feat_modes = ["global"]
     feat_nums = [feat_number]
 
     for tm in test_modes:
