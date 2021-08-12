@@ -6,7 +6,7 @@ import numpy as np
 
 
 
-feat_number=11
+feat_number=32
 
 def test_switch(checkpoint_path, rank_file, input_form):
 

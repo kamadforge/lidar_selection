@@ -240,7 +240,7 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
-    lines_num = 64
+    lines_num = 65
     lines_selected=feature_num
     lines = np.arange(lines_num)
 
@@ -260,10 +260,10 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
             print("Seed: ", seed)
         lines = np.random.choice(lines_num, lines_selected, replace=False)
     elif test_mode == "spaced":
-        #lines = np.arange(0,lines_num, int(lines_num/lines_selected))
-        lines = np.linspace(0, lines_num, lines_selected, dtype=int)
+        lines = np.arange(0,lines_num, int(lines_num/lines_selected))
+        #lines = np.linspace(0, lines_num, lines_selected, dtype=int)
 
-        #lines = np.append(lines, 64)
+        lines = np.append(lines, 64)
     elif test_mode == "most":
 
         # all points in a mask
