@@ -166,7 +166,7 @@ a = torch.cuda.memory_allocated(0)
 f = r-a  # free inside reserved
 print(f"total device: {t}, reserved: {r}, allocated: {a}, free: {f}.")
 
-test_features_in_checkpoint(args.resume, args.input)
+#test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)

@@ -334,7 +334,14 @@ def depth_read(filename, depth_mode, type_feature, depth_source):
     else:
         print(f"depth {depth_mode} pts: ", len(np.where(depth)[0] > 0))
 
+    depth = normalize_depth(depth)
+
     return depth, bins #375, 1242 #376, 1241
+
+
+def normalize_depth(depth):
+    depth = (depth - depth.mean()) / depth.std()
+    return depth
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
