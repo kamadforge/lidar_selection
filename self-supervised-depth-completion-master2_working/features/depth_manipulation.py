@@ -114,7 +114,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
             squares_local = np.load(f"ranks/sq/instance/Ss_val_argsort_{name}.npy")
             squares = squares_local[iter, -sq_selected:]
 
-    if (feature_mode == "global" and iter == 999) or (feature_mode == "local" and (iter == 999 or iter == 998)):
+    if (feature_mode == "global" and (iter == 999 or iter == 1)) or (feature_mode == "local" and (iter == 999 or iter == 998)):
         print(f"Squares used {test_mode}: ", squares)
 
 

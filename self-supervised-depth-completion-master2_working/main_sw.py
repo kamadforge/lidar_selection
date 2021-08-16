@@ -432,6 +432,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
 
             folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, "switch_train", -1, bif_mode, 0, i_total_train, False)
             parameters_name = folder_and_name.split(os.sep)[-4]
+            print("param name", parameters_name)
             checkpoint_name = args.resume.split(os.sep)[-1]
 
             ranks_save_dir = f"ranks/{args.type_feature}/global/{checkpoint_name}/{parameters_name}"
