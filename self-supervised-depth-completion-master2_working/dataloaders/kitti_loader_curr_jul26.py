@@ -334,7 +334,7 @@ def depth_read(filename, depth_mode, type_feature, depth_source):
     else:
         print(f"depth {depth_mode} pts: ", len(np.where(depth)[0] > 0))
 
-    depth = normalize_depth(depth)
+    #depth = normalize_depth(depth)
 
     return depth, bins #375, 1242 #376, 1241
 
