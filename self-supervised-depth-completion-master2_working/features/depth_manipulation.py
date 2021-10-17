@@ -5,12 +5,15 @@
 
 import numpy as np
 import os
-
+from PIL import Image
 
 from scipy.stats import binned_statistic_2d
 
 from features.depth_draw import draw
 from features.show_lines import save_pic
+from features.point_to_line import separate_dic_from_gtpoints, create_mask_from_points
+
+from dataloaders import transforms
 
 # print("bins shape", bins_2d_depth.statistic.shape)
 
@@ -21,6 +24,8 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
 
     #depth_points[0] - ver coordinates of posiitve dept points
     # depth_points[1] - hor coordinates of posiitve dept points
+
+
 
     depth = depth.detach().cpu().numpy().squeeze()
     depth_points = np.where(depth > 0)
@@ -232,11 +237,102 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
 
 
 
-def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, model_orig, seed=116):
+def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, sparse_depth_pathname, model_orig, seed=116):
 
+    print("lines insidde")
+    # read png file / mask
+    path_pngmask = "/home/kamil/Dropbox/Current_research/data/kitti/depth_line_repro_dengxin"
+
+
+    #if "09_30" in sparse_depth_pathname:
+    name_pngmask = os.path.basename(sparse_depth_pathname)
+    if name_pngmask[:2]=="20": #test image
+        folder1 = name_pngmask[:10]
+        folder2 = name_pngmask[:26]
+        name = name_pngmask[-23:-13]
+        image = name_pngmask [-12:-4]
+        path_lines = f"{path_pngmask}/{folder1}/{folder2}/proj_line/velodyne_raw/image_03/{name}.png"
+        print(path_lines)
+        print(os.path.isfile(path_lines))
+    else:
+        sparse_depth_pathname_arr = sparse_depth_pathname.split("/")
+        folder1 = sparse_depth_pathname_arr[9][:10]
+        folder2 = sparse_depth_pathname_arr[9]
+        image = sparse_depth_pathname_arr[-2]
+        name = sparse_depth_pathname_arr[-1]
+        path_lines = f"{path_pngmask}/{folder1}/{folder2}/proj_line/velodyne_raw/image_03/{name}"
+        if not os.path.isfile(path_lines):
+            path_lines = f"{path_pngmask}/{folder1}/{folder2}/proj_line/velodyne_raw/image_02/{name}"
+        if not os.path.isfile(path_lines):
+            return depth.detach().cpu().numpy().squeeze(), feature_mode, test_mode, np.arange(65)
+        print(path_lines)
+        print(os.path.isfile(path_lines))
+
+        #put the 65x352x1216
+
+
+####################
+    # creating individual masks
+
+    mask_local = 1
+    print("loc mask bool: ", mask_local)
+    if mask_local:
+        print("Local mask")
+        local_mask_path = sparse_depth_pathname[:-4]+"_locmask"+".npy"
+        if not os.path.isfile(local_mask_path):
+            dic_file = separate_dic_from_gtpoints(path_lines)
+            local_mask_path = create_mask_from_points(dic_file, sparse_depth_pathname)
+
+            #masks_dic = np.load(local_mask_path, allow_pickle=True)
+
+
+#            masks = np.load("features/kitti_pixels_to_lines_masks_2.npy")
+        else:
+            print("File exists already")
+
+        masks_dic = np.load(local_mask_path, allow_pickle=True)
+
+        print("Masks length: ", len(masks_dic))
+
+        masks = np.zeros((65, 352, 1216))
+        # m = Image.open(path_lines)
+        # m_all_arr = np.array(m)
+        # m_arr=m_all_arr[-352:, -1216:]
+        # print(m_arr.shape)
+        dic_file = {}
+        for i in range(1, 65):
+            inds = np.where(masks_dic[:, 2] == i)[0]
+
+            ver = masks_dic[inds][:,0]
+            hor = masks_dic[inds][:,1]
+
+
+            if len(ver)!=0:
+                masks[i, ver, hor] = 1
+            # dic_file[i]=[ver, hor]
+
+            # np.save(path_lines[:-4]+"_mask"+".npy", dic_file)
+
+        print("Masks all: ", len(np.where(masks>0)[0]))
+
+
+    else:
+        masks = np.load("features/kitti_pixels_to_lines_masks_2.npy")
+
+
+
+######################
+
+
+
+
+
+############
 
     depth = depth.detach().cpu().numpy().squeeze()
-    masks = np.load("features/kitti_pixels_to_lines_masks.npy")
+
+
+
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
@@ -255,7 +351,7 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
     elif "two" in test_mode:
         lines = [int(a) for a in test_mode[4:-1].split(",")]
     elif "custom" in test_mode:
-        lines = [64,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49]
+        lines = np.arange(65)
     if test_mode == "random":
         if feature_mode == "global":
             np.random.seed(seed) # comment to get local random
@@ -324,11 +420,28 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
 
     #visualizing the selected lines (full, filled lines)
     if select_mask:
+        print("Masks select mask: ", len(np.where(masks>0)[0]))
+
         mask_new = np.zeros_like(depth)
         for p, item in enumerate(lines):
             mask_new = mask_new+masks[item]
 
-        depth=mask_new*depth
+        print("Mask new: ", len(np.where(mask_new>0)[0]))
+
+        depth_orig=depth
+        print("depth orig: ", len(np.where(depth > 0)[0]))
+        depth_masked=mask_new*depth
+
+        print("depth times mask: ", len(np.where(depth_masked > 0)[0]))
+
+        depth = depth_masked
+        print("depth times mask depth: ", len(np.where(depth > 0)[0]))
+
+        # viz:
+
+
+        #im = Image.fromarray(np.uint8(depth_orig * 255))
+        #im.save("features/mask_new.png")
 
 
         #save_pic(mask_new, test_mode)

@@ -8,6 +8,7 @@ from torch.nn.parameter import Parameter
 
 torch.set_printoptions(profile="full")
 
+# save a 0-1 file as image (to show line)
 def save_pic(pic, i=None):
     fig = plt.figure(frameon=False)
 
@@ -15,16 +16,13 @@ def save_pic(pic, i=None):
     ax.set_axis_off()
     fig.add_axes(ax)
 
-
     ax.imshow(pic, cmap='Greys', aspect='auto')
     #ax.imshow(mins[i], cmap='Greys', aspect='auto')
-    fig.savefig(f'figures/line_{i}.png')
+    fig.savefig(f'../figures/line_{i}.png')
 
-
+# to create masks, one mask for all the images, where the boundaries of each mask are two best curve fits.
 def process_lines():
-
     lines=np.load("kitti_pixels_to_lines_proc.npy")
-
 
     # # check for duplicate points:
     # for i1 in range(lines.shape[1]):
@@ -43,9 +41,12 @@ def process_lines():
         minss[i]=[]
         maxess[i]=[]
 
+        #minss and maxess will have 64 x 1215 x 2 dimensions
+
+    #for each vertical line find the max and min of each line, e.g  minss [1214, 145], [1215, 148]]}
     for l in range(lines.shape[0]):
         for i2 in range(lines.shape[2]):
-            if np.sum(lines[l, :, i2])>0:
+            if np.sum(lines[l, :, i2])>0: #if there are depth pixels in vertical line
                 #print(lines[l, :, i2])
                 nonzero= np.where(lines[l,:,i2]>0)[0]
                 mins[l, i2] = min(nonzero)
@@ -53,8 +54,6 @@ def process_lines():
 
                 minss[l].append([i2, min(nonzero)])
                 maxess[l].append([i2, min(nonzero)])
-
-
 
     #np.save("kitti_pixels_to_lines_proc.npy", lines)
     #pdrawing new lines
@@ -71,20 +70,18 @@ def process_lines():
             y = coeffs_min[0] * (x ** 2) + coeffs_min[1] * x + coeffs_min[2]
             y_max = coeffs_max[0] * (x ** 2) + coeffs_max[1] * x + coeffs_max[2]
             for i2 in range(lines.shape[2]): #i2 and x same
-                print(l, int(y[i2]), i2)
+                #print(l, int(y[i2]), i2)
                 try:
                     lines_boundaries[l, int(y[i2]), i2]=1
                 except IndexError:
                     print("no index")
 
     lines_new = np.zeros_like(lines)
-
+    np.set_printoptions(threshold=np.inf)
+    ups = np.ones((l+1, lines.shape[2]))*352
     for l in range(1, lines.shape[0]):
         print(l)
-        if l==64:
-            dd=3
-            print("dd")
-        for i2 in range(lines.shape[2]):
+        for i2 in range(lines.shape[2]): #1216
             #print("i2: ", i2)
             # if we have upper bound of a line region given by the next line
             if l+1< lines.shape[0]:
@@ -96,24 +93,36 @@ def process_lines():
                 v_d = v_down[0]
             if len(v_up)>0:
                 v_u=v_up[0];
-                while v_u < v_d:
+                if i2 == 555:
+                    print(f"v_u {v_u}")
+                #while v_u < v_d:
+                if i2==555:
+                    print(f"ups[l-1][i2]: ups[{l-1}][{i2}]: {ups[l-1][i2]}")
+                ups[l][i2] = v_u
+                while v_u < ups[l-1][i2]:
+                    if i2 == 555:
+                        print(v_u)
                     lines_new[l, v_u, i2]=1
                     v_u = v_u + 1
+                if i2 == 555:
+                    print(f"v_u {v_u}, v_u-1 {v_u-1}")
 
-    np.save("kitti_pixels_to_lines_masks.npy", lines_new)
+                if i2 == 555:
+                    print(f"updated line {l} {i2} previous to: {ups[l][i2]}")
+        #print(f"previous up: {ups[l]}")
 
+    np.save("kitti_pixels_to_lines_masks_2.npy", lines_new)
+    #positive poitns: 251712
+    #exactly 1216 * 207
 
     for i in range(65):
-        save_pic(lines_new[i])
+        save_pic(lines_new[i], i)
 
     # plt.imshow(lines[35])
     # plt.savefig('figures/line_35.png')
     # plt.show()
 
-
     parameter_mask = torch.tensor(lines)
-
-
     parameter = Parameter(-1e-10 * torch.ones(65), requires_grad=True)
     phi = F.softplus(parameter)
 
@@ -123,9 +132,7 @@ def process_lines():
     # it looks like too large values are making softplus-transformed values very large and returns NaN.
     # this occurs when optimizing with a large step size (or/and with a high momentum value)
 
-
     S = phi / torch.sum(phi)
-
 
     S_mask_ext = torch.einsum("i, ijk->ijk", [S, parameter_mask])
     print(S_mask_ext[24][308][733])
@@ -143,3 +150,5 @@ def process_lines():
     print(np.sort(point_nums))
 
     a=0
+
+#process_lines()

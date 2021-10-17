@@ -288,16 +288,29 @@ def depth_read(filename, depth_mode, depth_source):
 
         depth_adjustment_kitti(depth, depth_points, bins_2d_depth)
 
-    depth = normalize_depth(depth)
+    # normalize depth (option 1)
+    normalize=0
+    if normalize:
+        depth, mean, std = normalize_depth(depth)
+        if depth_mode == "sparse":
+            if "means" not in globals():
+                global means
+                means = []
+            else:
+                means.append(mean)
+
+            print("means: ", np.mean(means))
 
     return depth, bins #375, 1242 #376, 1241
 
 
 def normalize_depth(depth):
 
-    depth = (depth - depth.mean()) / depth.std()
+    #depth = (depth - depth.mean()) / depth.std()
+    depth_inds = np.where(depth>0)
 
-    return depth
+    #return depth, depth[depth_inds].mean(), depth[depth_inds].std()
+    return depth, depth.mean(), depth.std()
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
 def depth_adjustment_kitti(depth, depth_points, bins_2d_depth):

@@ -334,7 +334,11 @@ def depth_read(filename, depth_mode, type_feature, depth_source):
     else:
         print(f"depth {depth_mode} pts: ", len(np.where(depth)[0] > 0))
 
+
 #    depth = normalize_depth(depth)
+
+
+
 
     return depth, bins #375, 1242 #376, 1241
 
@@ -560,10 +564,14 @@ class KittiDepth(data.Dataset):
 
     def __getitem__(self, index):
         rgb, sparse, target, rgb_near = self.__getraw__(index)
+        #im = Image.fromarray(rgb)
+        #im.save("orig.jpg")
         print(f"sparse: {len(np.where(sparse)[0] > 0)}")
         print(f"dense gt: {len(np.where(target)[0] > 0)}")
         rgb, sparse, target, rgb_near = self.transform(rgb, sparse, target,
                                                        rgb_near, self.args)
+        #im = Image.fromarray(rgb)
+        #im.save("orig_trans.jpg")
         print("\ntransform")
         print(f"sparse: {len(np.where(sparse)[0] > 0)}")
         print(f"dense gt: {len(np.where(target)[0] > 0)}")
