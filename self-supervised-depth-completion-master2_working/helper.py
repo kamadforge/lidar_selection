@@ -87,26 +87,26 @@ class logger:
             return avg
         else:
             raise ValueError("wrong split provided to logger")
-        with open(csvfile_name, 'a') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writerow({
-                'epoch': epoch,
-                'rmse': avg.rmse,
-                'photo': avg.photometric,
-                'mae': avg.mae,
-                'irmse': avg.irmse,
-                'imae': avg.imae,
-                'mse': avg.mse,
-                'silog': avg.silog,
-                'squared_rel': avg.squared_rel,
-                'absrel': avg.absrel,
-                'lg10': avg.lg10,
-                'delta1': avg.delta1,
-                'delta2': avg.delta2,
-                'delta3': avg.delta3,
-                'gpu_time': avg.gpu_time,
-                'data_time': avg.data_time
-            })
+#        with open(csvfile_name, 'a') as csvfile:
+#            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+#            writer.writerow({
+#                'epoch': epoch,
+#                'rmse': avg.rmse,
+#                'photo': avg.photometric,
+#                'mae': avg.mae,
+#                'irmse': avg.irmse,
+#                'imae': avg.imae,
+#                'mse': avg.mse,
+#                'silog': avg.silog,
+#                'squared_rel': avg.squared_rel,
+#                'absrel': avg.absrel,
+#                'lg10': avg.lg10,
+#                'delta1': avg.delta1,
+#                'delta2': avg.delta2,
+#                'delta3': avg.delta3,
+#                'gpu_time': avg.gpu_time,
+#                'data_time': avg.data_time
+#            })
         return avg
 
     def save_single_txt(self, filename, result, epoch):

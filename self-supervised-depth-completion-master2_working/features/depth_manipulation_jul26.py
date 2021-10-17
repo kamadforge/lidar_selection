@@ -107,7 +107,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, rank_file_glob
             squares_local = np.load(f"ranks/sq/instance/Ss_val_argsort_{name}.npy")
             squares = squares_local[iter, -sq_selected:]
 
-    if (feature_mode == "global" and iter == 999) or (feature_mode == "local" and (iter == 999 or iter == 998)):
+    if (feature_mode == "global" and (iter == 999 or iter ==1)) or (feature_mode == "local" and (iter == 999 or iter == 998)):
         print(f"Squares used {test_mode}: ", squares)
 
     run_info=[feat_choice, feature_mode, test_mode, model_orig]
@@ -142,11 +142,14 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, rank_file_glob
         #depth = np.random.normal(10, 5, (depth.shape[0], depth.shape[1])) #RMSE=21186.322, MAE=19962.695
         depth =np.zeros_like(depth)
 
-    points_wanted_num = 50
-    points_choice = "random"
-    print(f"adjust: {adjust}, points_wanted_num: {points_wanted_num}, points_choice: {points_choice}")
+    
 
     if adjust:
+    
+        points_wanted_num = 50
+        points_choice = "random"
+        print(f"adjust: {adjust}, points_wanted_num: {points_wanted_num}, points_choice: {points_choice}")
+        
         depth_new = np.zeros_like(depth)
         # find the set of points for each bin
         max_bin = 400 #max(bins_2d_depth.binnumber)

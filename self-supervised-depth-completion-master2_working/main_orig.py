@@ -12,6 +12,7 @@ import torch.optim
 import torch.utils.data
 
 # from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
+
 from dataloaders.kitti_loader_curr_jul26 import load_calib, oheight, owidth, input_options, KittiDepth
 from model import DepthCompletionNet
 from metrics import AverageMeter, Result
@@ -277,6 +278,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # for i in range(im_sq.shape[0]):
         #     print(f"{i} - {np.sum(im_sq[i])}")
 
+
+#        pred = pred +9.5
+#        gt = gt+9.5
         # compute loss
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
         if mode == 'train':

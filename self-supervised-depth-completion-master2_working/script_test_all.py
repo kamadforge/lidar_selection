@@ -6,8 +6,8 @@ import numpy as np
 
 
 
-feat_number=93
-type_feature="sq"
+feat_number=32
+type_feature="lines"
 
 def test_switch(checkpoint_path, rank_file, input_form):
 
@@ -20,20 +20,20 @@ def test_switch(checkpoint_path, rank_file, input_form):
 
 def test_features_in_checkpoint(checkpoint_path, input_form):
 
-    test_modes = [ "spaced", "most", "random"]
-    test_modes = [ "most", "random"]
+    #test_modes = [ "spaced", "most", "random"]
+    #test_modes = [ "most", "random"]
     #test_modes = ["custom"]
-    #test_modes = []
-    #for i in range(65):
-    #    test_modes.append("one"+str(i))
+    test_modes = []
+    for i in range(65):
+        test_modes.append("one"+str(i))
     
     #twos = list(itertools.combinations(np.arange(65), 2))
     #for t in twos:
     #    test_modes.append("two"+str(t))
     
         
-    feat_modes = ["global", "local"]
-    #feat_modes = ["global"]
+#    feat_modes = ["global", "local"]
+    feat_modes = ["global"]
     feat_nums = [feat_number]
 
     for tm in test_modes:
