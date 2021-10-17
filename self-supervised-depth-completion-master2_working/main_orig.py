@@ -130,13 +130,13 @@ parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 parser.add_argument('--depth_adjust', default=1, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--depth_save', default=1, type=int)
+parser.add_argument('--depth_save', default=0, type=int)
 
 
 parser.add_argument('--seed', default=120, type=int)
 
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="spaced")
+parser.add_argument('--test_mode', default="custom")
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=32, type=int)
 
@@ -249,6 +249,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # adjust depth for features
         depth_adjust=args.depth_adjust
         adjust_features=False # normalize the number of points in a feature
+        print(depth_adjust, args.use_d)
         if depth_adjust and args.use_d:
             if args.type_feature == "sq":
                 if args.use_rgb:
@@ -257,10 +258,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, adjust_features, i, model_orig, args.seed)
             elif args.type_feature == "lines":
-                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, i, model_orig, args.seed)
+                print("lines")
+                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, i, sparse_depth_pathname, model_orig, args.seed)
 
-
+            print("batch depth_new: ", len(np.where(depth_new > 0)[0]))
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
+
+        print("batch depth: ", len(torch.where(batch_data['d']>0)[0]))
         data_time = time.time() - start
         start = time.time()
         if mode=="train":
