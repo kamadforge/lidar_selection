@@ -120,11 +120,11 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-# parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
-
+parser.add_argument('--record_eval', default=1)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 
@@ -136,9 +136,9 @@ parser.add_argument('--depth_save', default=1, type=int)
 parser.add_argument('--seed', default=120, type=int)
 
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="spaced")
+parser.add_argument('--test_mode', default="random")
 parser.add_argument('--feature_mode', default='global')
-parser.add_argument('--feature_num', default=20, type=int)
+parser.add_argument('--feature_num', default=-1, type=int)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 parser.add_argument('--rank_file_global_sq')
@@ -169,6 +169,8 @@ if args.evaluate == "1":
 elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 model_orig = os.path.split(args.evaluate)[1]
+
+args.seed = int(time.time())
 
 print(args)
 
@@ -351,7 +353,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
         # save log and checkpoint
-        every=999 if mode == "val" else 200 #200
+        every=len(loader)-1 if mode == "val" else 200 #200
 
         if i % every ==0 and i!=0:
 
@@ -391,6 +393,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             vis_utils.save_depth_as_uint16png(depth_pred_color, path_depth + f"{name}_im_color.png")
 
         print('\n'+'*'*15+'\n\n')
+
+    if args.record_eval:
+        with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
+            file.write("\n"+ ",".join([str(f) for f in features])+":"+str(avg.rmse))
+
     return avg, is_best
 
 
@@ -415,6 +422,7 @@ def main():
             args.use_rgb = args_new.use_rgb
             args.use_d = args_new.use_d
             args.input = args_new.input
+            args.record_eval = args_new.record_eval
             args.evaluate = args_new.evaluate
             args.ranks_file = args_new.ranks_file
             args.seed = args_new.seed
@@ -495,6 +503,9 @@ def main():
     if is_eval:
         print("=> starting model evaluation ...")
         result, is_best = iterate("val", args, val_loader, model, None, logger, checkpoint['epoch'])
+        print("Res:", result)
+        print(is_best)
+
         return
 
     # MAIN LOOP

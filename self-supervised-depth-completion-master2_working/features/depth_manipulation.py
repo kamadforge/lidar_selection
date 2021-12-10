@@ -241,7 +241,10 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
     lines_num = 65
-    lines_selected=feature_num
+    if feature_num == -1:
+        lines_selected = np.random.choice(lines_num)
+    else:
+        lines_selected=feature_num
     lines = np.arange(lines_num)
 
 
@@ -319,6 +322,7 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
 
 
     print(f"Lines used {test_mode}: ", lines)
+
 
     #visualizing the selected lines (full, filled lines)
     if select_mask:
