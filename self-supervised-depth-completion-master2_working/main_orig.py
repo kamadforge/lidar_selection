@@ -5,6 +5,7 @@
 import argparse
 import os
 import time
+import datetime
 
 import torch
 import torch.nn.parallel
@@ -17,6 +18,7 @@ from model import DepthCompletionNet
 from metrics import AverageMeter, Result
 import criteria
 import helper
+
 from inverse_warp import Intrinsics, homography_from
 from features.depth_manipulation import depth_adjustment, depth_adjustment_lines
 from features.depth_draw import draw
@@ -93,7 +95,7 @@ parser.add_argument('-i',
 parser.add_argument('-l',
                     '--layers',
                     type=int,
-                    default=34,
+                    default=18,
                     help='use 16 for sparse_conv; use 18 or 34 for resnet')
 parser.add_argument('--pretrained',
                     action="store_true",
@@ -120,18 +122,17 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+# parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
-parser.add_argument('--record_eval', default=1)
+parser.add_argument('--record_eval', default=0)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 
 parser.add_argument('--depth_adjust', default=1, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
-
 
 parser.add_argument('--seed', default=120, type=int)
 
@@ -232,7 +233,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     # ITERATE OVER IMAGES
 
     for i, batch_data in enumerate(loader):
-
         sparse_depth_pathname = batch_data['d_path'][0]
         print(sparse_depth_pathname)
         del batch_data['d_path']
@@ -356,7 +356,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         every=len(loader)-1 if mode == "val" else 200 #200
 
         if i % every ==0 and i!=0:
-
+            print(datetime.datetime.now())
             print(f"test settings (main_orig eval): {args.type_feature} {args.test_mode} {args.feature_mode} {args.feature_num}")
             avg = logger.conditional_save_info(mode, average_meter, epoch)
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
@@ -393,6 +393,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             vis_utils.save_depth_as_uint16png(depth_pred_color, path_depth + f"{name}_im_color.png")
 
         print('\n'+'*'*15+'\n\n')
+
 
     if args.record_eval:
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
@@ -432,6 +433,7 @@ def main():
             args.draw_features_rgb = args_new.draw_features_rgb
             args.depth_save = args_new.depth_save
             args.rank_file_global_sq = args_new.rank_file_global_sq
+            args.layers = args_new.layers
             is_eval = True
             print("Completed.")
         else:
@@ -501,7 +503,7 @@ def main():
     print("=> logger created.")
 
     if is_eval:
-        print("=> starting model evaluation ...")
+        print("\n\n\n=> starting model evaluation ...\n\n\n\n")
         result, is_best = iterate("val", args, val_loader, model, None, logger, checkpoint['epoch'])
         print("Res:", result)
         print(is_best)
@@ -512,7 +514,7 @@ def main():
 
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
-        print("=> starting training epoch {} ..".format(epoch))
+        print("\n\n\n=> starting training epoch {} ..\n\n\n\n".format(epoch))
         iterate("train", args, train_loader, model, optimizer, logger,
                 epoch)  # train for one epoch
         result, is_best = iterate("val", args, val_loader, model, None, logger,
