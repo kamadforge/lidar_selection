@@ -6,7 +6,7 @@ import math
 
 filename = "ranks/lines/global/shap/lines_shap.txt"
 filename = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/shap/lines_shap.txt"
-filename2 = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/shap/lines_shap2.txt"
+filename_clean = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/shap/lines_shap2.txt"
 
 
 #remove the multiple entries
@@ -18,11 +18,11 @@ for line in file:
         s[split_keyval[0]]=split_keyval[1]
 
 # make a new file with unrepeated entries
-file = open(filename2, "w+")
+file = open(filename_clean, "w+")
 file.truncate()
 for el in s:
     file.write(el+":"+s[el]+"\n")
-file = open(filename2)
+file = open(filename_clean)
 
 # get the dictionary with key - the nodes in a subset, value: set value (the difference)
 dic = {}
@@ -54,5 +54,5 @@ for i in dic.keys():
 reg = LinearRegression().fit(list(dic.keys()), list(dic.values()), weights)
 shap_arr = reg.coef_
 print("shaps\n", shap_arr)
-shap_arr_sorted = np.argsort(shap_arr)
-print(shap_arr_sorted)
+shap_arr_sorted = np.argsort(shap_arr)[-32:]
+print(",".join([str(a) for a in shap_arr_sorted]))
