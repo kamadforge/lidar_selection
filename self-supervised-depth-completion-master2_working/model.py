@@ -205,6 +205,7 @@ class DepthCompletionNet(nn.Module):
         else:
             conv1 = conv1_d if (self.modality == 'd') else conv1_img
 
+
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)  # batchsize * ? * 176 * 608
         conv4 = self.conv4(conv3)  # batchsize * ? * 88 * 304
@@ -214,6 +215,9 @@ class DepthCompletionNet(nn.Module):
         # decoder
         convt5 = self.convt5(conv6)
         y = torch.cat((convt5, conv5), 1)
+
+        # print("convv",  convt5.shape)
+        # print(y.shape)
 
         convt4 = self.convt4(y)
         y = torch.cat((convt4, conv4), 1)
