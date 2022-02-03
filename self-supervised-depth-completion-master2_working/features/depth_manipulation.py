@@ -256,7 +256,8 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
     elif "two" in test_mode:
         lines = [int(a) for a in test_mode[4:-1].split(",")]
     elif "custom" in test_mode:
-        lines = [64,63,62,61,60,59,58,57,56,55,54,53,52,51,50,49]
+        lines = [6,21,20,17,47,5,4,24,37,23,32,27,35,2,53,41,16,11,49,59,56,51,50,52,10,54,63,62,57,60,61,64]
+        #[44,29,34,42,30,43,19,36,5,21,8,1,53,27,13,51,25,2,49,41,4,62,31,0,14,12,59,45,24,26,32,18,39,17, 20,33,47,6,15,16,22,9,40,35,28,10,48,38,55,11,23,58,52,7,54,3,50,57,56,63,61,60,46,64,37
     if test_mode == "random":
         if feature_mode == "global":
             np.random.seed(seed) # comment to get local random

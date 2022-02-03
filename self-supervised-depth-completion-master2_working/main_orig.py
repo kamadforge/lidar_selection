@@ -120,11 +120,11 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-#parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
+parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+#parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
-parser.add_argument('--record_eval', default=1)
+parser.add_argument('--record_eval_shap', default=1, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 
@@ -170,7 +170,7 @@ elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 model_orig = os.path.split(args.evaluate)[1]
 
-args.seed = int(time.time())
+args.seed = int(time.time())+np.random.choice(100000)
 
 print(args)
 
@@ -394,7 +394,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         print('\n'+'*'*15+'\n\n')
 
-    if args.record_eval:
+    if args.record_eval_shap:
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
             file.write("\n"+ ",".join([str(f) for f in features])+":"+str(avg.rmse))
 
@@ -422,7 +422,7 @@ def main():
             args.use_rgb = args_new.use_rgb
             args.use_d = args_new.use_d
             args.input = args_new.input
-            args.record_eval = args_new.record_eval
+            args.record_eval_shap = args_new.record_eval_shap
             args.evaluate = args_new.evaluate
             args.ranks_file = args_new.ranks_file
             args.seed = args_new.seed
