@@ -1,10 +1,11 @@
 import math
-import os, time
+import os, time, datetime
 import shutil
 import torch
 import csv
 import vis_utils
 from metrics import Result
+
 
 fieldnames = [
     'epoch', 'rmse', 'photo', 'mae', 'irmse', 'imae', 'mse', 'absrel', 'lg10',
@@ -179,7 +180,7 @@ class logger:
             filename = os.path.join(image_folder, '{0:010d}.png'.format(i))
             vis_utils.save_depth_as_uint16png(img, filename)
 
-    def conditional_summarize(self, mode, avg, is_best):
+    def conditional_summarize(self, mode, avg, is_best, args):
         print("\n*\nSummary of ", mode, "round")
         print(''
               'RMSE={average.rmse:.3f}\n'
@@ -194,18 +195,18 @@ class logger:
               'Lg10={average.lg10:.3f}\n'
               't_GPU={time:.3f}'.format(average=avg, time=avg.gpu_time))
         if is_best and mode == "val":
-            print("New best model by %s (was %.3f)" %
-                  (self.args.rank_metric,
-                   self.get_ranking_error(self.old_best_result)))
+            print("New best model by %s (was %.3f)" % (self.args.rank_metric, self.get_ranking_error(self.old_best_result)))
         elif mode == "val":
-            print("(best %s is %.3f)" %
-                  (self.args.rank_metric,
-                   self.get_ranking_error(self.best_result)))
+            print("(best %s is %.3f)" % (self.args.rank_metric, self.get_ranking_error(self.best_result)))
         print("*\n")
 
+        os.makedirs("results", exist_ok=True)
+        filename = f"results/{mode}_res.txt"
+        file = open(filename, "a+")
+        file.write(f"{args.seed},{datetime.datetime.now()}, {args.layers},{args.depth_adjust},{args.test_mode},{args.type_feature},{args.feature_num},{avg.rmse:.3f}\n")
+        file.close()
 
-ignore_hidden = shutil.ignore_patterns(".", "..", ".git*", "*pycache*",
-                                       "*build", "*.fuse*", "*_drive_*")
+ignore_hidden = shutil.ignore_patterns(".", "..", ".git*", "*pycache*", "*build", "*.fuse*", "*_drive_*")
 
 
 def backup_source_code(backup_directory):

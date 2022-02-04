@@ -27,7 +27,7 @@ import vis_utils
 
 import numpy as np
 
-# ARGUMENTS
+#################################################### ARGUMENTS
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
 parser.add_argument('-w',
@@ -186,7 +186,7 @@ else:
 print(f"\noutput (only for training): {args.train_mode}\n")
 
 
-# SET-UP
+############################### SET-UP
 
 cuda = torch.cuda.is_available() and not args.cpu
 if cuda:
@@ -220,8 +220,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     average_meter = AverageMeter()
     meters = [block_average_meter, average_meter]
     # switch to appropriate mode
-    assert mode in ["train", "val", "eval", "test_prediction", "test_completion"], \
-        "unsupported mode: {}".format(mode)
+    assert mode in ["train", "val", "eval", "test_prediction", "test_completion"], "unsupported mode: {}".format(mode)
     if mode == 'train':
         model.train()
         lr = helper.adjust_learning_rate(args.lr, optimizer, epoch)
@@ -231,7 +230,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     torch.set_printoptions(profile="full")
     table_is=np.zeros(400)
 
-    # ITERATE OVER IMAGES
+    #################### ITERATE OVER IMAGES
 
     for i, batch_data in enumerate(loader):
         sparse_depth_pathname = batch_data['d_path'][0]
@@ -245,8 +244,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             key: val.to(device)
             for key, val in batch_data.items() if val is not None
         }
-        gt = batch_data[
-            'gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
+        gt = batch_data['gt'] if mode != 'test_prediction' and mode != 'test_completion' else None
 
 
         # adjust depth for features
@@ -312,9 +310,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     height_, width_ = pred_.size(2), pred_.size(3)
                     intrinsics_ = kitti_intrinsics.scale(height_, width_)
                     # inverse warp from a nearby frame to the current frame
-                    warped_ = homography_from(rgb_near_, pred_,
-                                              batch_data['r_mat'],
-                                              batch_data['t_vec'], intrinsics_)
+                    warped_ = homography_from(rgb_near_, pred_, batch_data['r_mat'], batch_data['t_vec'], intrinsics_)
                     photometric_loss += photometric_criterion(
                         rgb_curr_, warped_, mask_) * (2**(scale - num_scales))
             # Loss 3: the depth smoothness loss
@@ -345,16 +341,14 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             elif result.rmse > 12000:
                 print("bad rmse")
 
-            logger.conditional_print(mode, i, epoch, lr, len(loader),
-                                     block_average_meter, average_meter)
-            logger.conditional_save_img_comparison(mode, i, batch_data, pred,
-                                                   epoch)
+            logger.conditional_print(mode, i, epoch, lr, len(loader), block_average_meter, average_meter)
+            logger.conditional_save_img_comparison(mode, i, batch_data, pred, epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
 
 
         # save log and checkpoint
-        every=len(loader)-1 if mode == "val" else 200 #200
+        every=len(loader)-1 if mode == "val" else 1000 #200
 
         if i % every ==0 and i!=0:
             print(datetime.datetime.now())
@@ -363,7 +357,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
                 logger.save_img_comparison_as_best(mode, epoch)
-            logger.conditional_summarize(mode, avg, is_best)
+            logger.conditional_summarize(mode, avg, is_best, args)
 
             if mode != "val":
             #if 1:
@@ -406,14 +400,16 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 ############################################################################
 
 def main():
+
+    ############################################ ARGS
+
     global args
     checkpoint = None
     is_eval = False
     if args.evaluate:
         args_new = args
         if os.path.isfile(args.evaluate):
-            print("=> loading checkpoint '{}' ... ".format(args.evaluate),
-                  end='')
+            print("=> loading checkpoint '{}' ... ".format(args.evaluate), end='')
             checkpoint = torch.load(args.evaluate, map_location=device)
             args = checkpoint['args']
             args.type_feature = args_new.type_feature
@@ -443,16 +439,14 @@ def main():
     elif args.resume:  # optionally resume from a checkpoint
         args_new = args
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}' ... ".format(args.resume),
-                  end='')
+            print("=> loading checkpoint '{}' ... ".format(args.resume), end='')
             checkpoint = torch.load(args.resume, map_location=device)
             args.start_epoch = checkpoint['epoch'] + 1
             args.data_folder = args_new.data_folder
             args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
             args.seed = args_new.seed
-            print("Completed. Resuming from epoch {}.".format(
-                checkpoint['epoch']))
+            print("Completed. Resuming from epoch {}.".format(checkpoint['epoch']))
         else:
             print("No checkpoint found at '{}'".format(args.resume))
             return
@@ -462,9 +456,7 @@ def main():
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]
-    optimizer = torch.optim.Adam(model_named_params,
-                                 lr=args.lr,
-                                 weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(model_named_params,lr=args.lr,weight_decay=args.weight_decay)
     print("completed.")
     if checkpoint is not None:
         model.load_state_dict(checkpoint['model'])
@@ -473,28 +465,18 @@ def main():
 
     model = torch.nn.DataParallel(model)
 
-    # DATA
+    ######################## DATA
 
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
         train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(10))
-        train_loader = torch.utils.data.DataLoader(train_dataset,
-                                                   batch_size=args.batch_size,
-                                                   shuffle=True,
-                                                   num_workers=args.workers,
-                                                   pin_memory=True,
-                                                   sampler=None)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True,sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
     val_dataset = KittiDepth('val', args)
 
     val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset_sub,
-        batch_size=1,
-        shuffle=False,
-        num_workers=0,
-        pin_memory=True)  # set batch size to be 1 for validation
+    val_loader = torch.utils.data.DataLoader(val_dataset_sub, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 
     # create backups and results folder
@@ -511,22 +493,14 @@ def main():
 
         return
 
-    # MAIN LOOP
+    #################################### MAIN LOOP
 
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print("\n\n\n=> starting training epoch {} ..\n\n\n\n".format(epoch))
-        iterate("train", args, train_loader, model, optimizer, logger,
-                epoch)  # train for one epoch
-        result, is_best = iterate("val", args, val_loader, model, None, logger,
-                                  epoch)  # evaluate on validation set
-        helper.save_checkpoint({ # save checkpoint
-            'epoch': epoch,
-            'model': model.module.state_dict(),
-            'best_result': logger.best_result,
-            'optimizer' : optimizer.state_dict(),
-            'args' : args,
-        }, is_best, epoch, logger.output_directory, args.type_feature, args.test_mode, args.feature_num, args.feature_mode, args.depth_adjust)
+        iterate("train", args, train_loader, model, optimizer, logger, epoch)  # train for one epoch
+        result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
+        helper.save_checkpoint({ 'epoch': epoch, 'model': model.module.state_dict(), 'best_result': logger.best_result, 'optimizer' : optimizer.state_dict(),'args' : args,}, is_best, epoch, logger.output_directory, args.type_feature, args.test_mode, args.feature_num, args.feature_mode, args.depth_adjust)
 
 
 if __name__ == '__main__':
