@@ -127,7 +127,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
-parser.add_argument('--record_eval_shap', default=1, type=int)
+parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
 
@@ -357,7 +357,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             is_best = logger.rank_conditional_save_best(mode, avg, epoch)
             if is_best and not (mode == "train"):
                 logger.save_img_comparison_as_best(mode, epoch)
-            logger.conditional_summarize(mode, avg, is_best, args)
+            logger.conditional_summarize(mode, avg, is_best, args, i)
 
             if mode != "val":
             #if 1:

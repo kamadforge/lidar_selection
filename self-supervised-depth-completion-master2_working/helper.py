@@ -180,7 +180,7 @@ class logger:
             filename = os.path.join(image_folder, '{0:010d}.png'.format(i))
             vis_utils.save_depth_as_uint16png(img, filename)
 
-    def conditional_summarize(self, mode, avg, is_best, args):
+    def conditional_summarize(self, mode, avg, is_best, args=None, i=None):
         print("\n*\nSummary of ", mode, "round")
         print(''
               'RMSE={average.rmse:.3f}\n'
@@ -203,7 +203,7 @@ class logger:
         os.makedirs("results", exist_ok=True)
         filename = f"results/{mode}_res.txt"
         file = open(filename, "a+")
-        file.write(f"{args.seed},{datetime.datetime.now()}, {args.layers},{args.depth_adjust},{args.test_mode},{args.type_feature},{args.feature_num},{avg.rmse:.3f}\n")
+        file.write(f"{args.seed},{datetime.datetime.now()}, {i}, {args.layers},{args.depth_adjust},{args.test_mode},{args.type_feature},{args.feature_num},{avg.rmse:.3f}\n")
         file.close()
 
 ignore_hidden = shutil.ignore_patterns(".", "..", ".git*", "*pycache*", "*build", "*.fuse*", "*_drive_*")
