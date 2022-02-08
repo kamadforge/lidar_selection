@@ -6,6 +6,8 @@ import argparse
 import os
 import time
 import datetime
+now = datetime.datetime.now()
+date_time = now.strftime("%Y_%m_%d_%H:%M")
 
 import torch
 import torch.nn.parallel
@@ -95,7 +97,7 @@ parser.add_argument('-i',
 parser.add_argument('-l',
                     '--layers',
                     type=int,
-                    default=18,
+                    default=34,
                     help='use 16 for sparse_conv; use 18 or 34 for resnet')
 parser.add_argument('--pretrained',
                     action="store_true",
@@ -122,14 +124,13 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
+parser.add_argument('-e', '--evaluate', default='1', type=str, metavar='PATH')
 
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
 parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
-
 
 parser.add_argument('--depth_adjust', default=1, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
@@ -171,6 +172,12 @@ if args.evaluate == "1":
 elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 model_orig = os.path.split(args.evaluate)[1]
+
+if args.evaluate != "":
+    args.result = f"../results/val/{date_time}"
+else:
+    args.result = f"../results/train/{date_time}"
+os.makedirs(args.result, exist_ok=True)
 
 args.seed = int(time.time())+np.random.choice(100000)
 
