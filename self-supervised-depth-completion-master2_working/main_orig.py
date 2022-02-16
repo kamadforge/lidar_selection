@@ -124,7 +124,7 @@ parser.add_argument(
     default="dense",
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
-parser.add_argument('-e', '--evaluate', default='1', type=str, metavar='PATH')
+parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 
@@ -399,7 +399,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     if args.record_eval_shap:
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
-            file.write("\n"+ ",".join([str(f) for f in features])+":"+str(avg.rmse))
+            file.write("\n"+ ",".join([str(f) for f in features])+":"+"{:.3f}".format(avg.rmse))
 
     return avg, is_best
 
