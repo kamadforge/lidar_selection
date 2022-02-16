@@ -16,7 +16,7 @@ import torch.utils.data
 
 # from dataloaders.kitti_loader_apr12 import load_calib, oheight, owidth, input_options, KittiDepth
 from dataloaders.kitti_loader_curr_jul26 import load_calib, oheight, owidth, input_options, KittiDepth
-from model import DepthCompletionNet
+from model import DepthCompletionNet, DepthCompletionNetIn, DepthCompletionNetInMain
 from metrics import AverageMeter, Result
 import criteria
 import helper
@@ -273,7 +273,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         data_time = time.time() - start
         start = time.time()
         if mode=="train":
-            pred = model(batch_data)
+            sel = modelin(batch_data)
+            pred = model(batch_data,sel)
+            print("pred", pred.shape)
         else:
             with torch.no_grad():
                 pred = model(batch_data)
@@ -295,6 +297,8 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 depth_loss = depth_criterion(pred, batch_data['d'])
                 mask = (batch_data['d'] < 1e-3).float()
             elif 'dense' in args.train_mode:
+                # print(pred.get_device())
+                # print(gt.get_device())
                 depth_loss = depth_criterion(pred, gt)
                 mask = (gt < 1e-3).float()
             # Loss 2: the self-supervised photometric loss
@@ -460,7 +464,9 @@ def main():
             return
 
     print("=> creating model and optimizer ... ", end='')
-    model = DepthCompletionNet(args).to(device)
+    global modelin
+    modelin = DepthCompletionNetIn(args).to(device)
+    model = DepthCompletionNetInMain(args).to(device)
     model_named_params = [
         p for _, p in model.named_parameters() if p.requires_grad
     ]
