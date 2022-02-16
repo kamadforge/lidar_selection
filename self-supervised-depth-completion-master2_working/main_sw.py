@@ -24,7 +24,7 @@ from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
-from script_test_all import test_features_in_checkpoint, test_switch
+#from script_test_all import test_features_in_checkpoint, test_switch
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -166,7 +166,7 @@ a = torch.cuda.memory_allocated(0)
 f = r-a  # free inside reserved
 print(f"total device: {t}, reserved: {r}, allocated: {a}, free: {f}.")
 
-test_features_in_checkpoint(args.resume, args.input)
+#test_features_in_checkpoint(args.resume, args.input)
 
 
 args.use_pose = ("photo" in args.train_mode)
