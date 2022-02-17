@@ -342,15 +342,15 @@ class DepthCompletionNetInMain(nn.Module):
 
         if mask is not None:
             if 'd' in self.modality:
-                torch.einsum("kl, ijkl -> ijkl", [mask, x['d']])
+                x['d'] = torch.einsum("kl, ijkl -> ijkl", [mask, x['d']])
             elif 'rgb' in self.modality:
-                torch.einsum("kl, ijkl -> ijkl", [mask, x['rgb']])
+                x['rgb'] =  torch.einsum("kl, ijkl -> ijkl", [mask, x['rgb']])
             elif 'g' in self.modality:
-                torch.einsum("kl, ijkl -> ijkl", [mask, x['g']])
+                x['g'] = torch.einsum("kl, ijkl -> ijkl", [mask, x['g']])
 
         # first layer
         if 'd' in self.modality:
-            print(f"depth input to the network: {len(torch.where(x['d']>0)[0])}")
+            print(f"depth input to the inmain network: {len(torch.where(x['d']>0)[0])}")
             conv1_d = self.conv1_d(x['d'])
         if 'rgb' in self.modality:
             conv1_img = self.conv1_img(x['rgb'])
