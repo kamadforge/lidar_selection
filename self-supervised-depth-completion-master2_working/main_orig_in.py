@@ -7,7 +7,7 @@ import os
 import time
 import datetime
 now = datetime.datetime.now()
-date_time = now.strftime("%Y_%m_%d_%H:%e M")
+date_time = now.strftime("%Y_%m_%d_%H:%M")
 
 import torch
 import torch.nn.parallel
@@ -132,7 +132,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
-parser.add_argument('--depth_adjust', default=1, type=int) #if we use all depth or subset of depth feature
+parser.add_argument('--depth_adjust', default=0, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 
@@ -224,6 +224,7 @@ if args.use_pose:
 ##################################################################################
 
 def iterate(mode, args, loader, model, optimizer, logger, epoch):
+    print("\n\n"+mode+ "\n\n")
     block_average_meter = AverageMeter()
     average_meter = AverageMeter()
     meters = [block_average_meter, average_meter]
@@ -278,7 +279,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             print("pred", pred.shape)
         else:
             with torch.no_grad():
-                pred = model(batch_data)
+                sel = modelin(batch_data)
+                pred = model(batch_data, sel)
+                #pred = model(batch_data)
 
         # im = batch_data['d'].detach().cpu().numpy()
         # im_sq = im.squeeze()
@@ -360,7 +363,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
 
         # save log and checkpoint
-        every=len(loader)-1 if mode == "val" else 1000 #200
+        every=len(loader)-1 if mode == "val" else 10000 #1000
 
         if i % every ==0 and i!=0:
             print(datetime.datetime.now())
@@ -443,6 +446,7 @@ def main():
             args.depth_save = args_new.depth_save
             args.rank_file_global_sq = args_new.rank_file_global_sq
             args.layers = args_new.layers
+            args.result = args_new.result
             is_eval = True
             print("Completed.")
         else:
@@ -458,6 +462,7 @@ def main():
             args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
             args.seed = args_new.seed
+            args.result = args_new.result
             print("Completed. Resuming from epoch {}.".format(checkpoint['epoch']))
         else:
             print("No checkpoint found at '{}'".format(args.resume))
@@ -484,13 +489,13 @@ def main():
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
-        train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(10))
+        train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(1000))
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True,sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
-    val_dataset = KittiDepth('val', args)
 
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
-    val_loader = torch.utils.data.DataLoader(val_dataset_sub, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)  # set batch size to be 1 for validation
+    val_dataset = KittiDepth('val', args)
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(50))
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 
     # create backups and results folder
