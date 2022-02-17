@@ -7,7 +7,7 @@ import os
 import time
 import datetime
 now = datetime.datetime.now()
-date_time = now.strftime("%Y_%m_%d_%H:%e M")
+date_time = now.strftime("%Y_%m_%d_%H:%M")
 
 import torch
 import torch.nn.parallel
@@ -156,7 +156,7 @@ elif args.evaluate == "2":
 
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
-args.result = os.path.join('..', 'results')
+#args.result = os.path.join('..', 'results')
 #args.use_rgb = ('rgb' in args.input) or args.use_pose
 args.use_rgb = True
 args.use_d = 'd' in args.input
@@ -439,6 +439,7 @@ def main():
             args.depth_save = args_new.depth_save
             args.rank_file_global_sq = args_new.rank_file_global_sq
             args.layers = args_new.layers
+            args.result = args_new.result
             is_eval = True
             print("Completed.")
         else:
@@ -454,6 +455,7 @@ def main():
             args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
             args.seed = args_new.seed
+            args.result = args_new.result
             print("Completed. Resuming from epoch {}.".format(checkpoint['epoch']))
         else:
             print("No checkpoint found at '{}'".format(args.resume))
