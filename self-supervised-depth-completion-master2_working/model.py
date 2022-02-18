@@ -467,7 +467,7 @@ class DepthCompletionNetIn(nn.Module):
 
         # first layer
         if 'd' in self.modality:
-            print(f"depth input to the network: {len(torch.where(x['d']>0)[0])}")
+            print(f"depth input to the actor network: {len(torch.where(x['d']>0)[0])}")
             conv1_d = self.conv1_d(x['d'])
         if 'rgb' in self.modality:
             conv1_img = self.conv1_img(x['rgb'])
@@ -491,22 +491,25 @@ class DepthCompletionNetIn(nn.Module):
         output = conv8.view(-1, 256 * 6 * 19)
         output = self.fc(output)
 
-        output = self.act_out(output)
+        output_prob = self.act_out(output)
 
-        output = torch.bernoulli(output)
-
-
-
+        # mask where a pixel of each line has the same probability
+        # param mask is [65, 352, 1216], squeezed [352,1216]
+        output_prob = output_prob.squeeze()
+        S_mask_ext_prob = torch.einsum("i, ijk->ijk", [output_prob, self.parameter_mask])
+        S_mask_prob = torch.max(S_mask_ext_prob, 0)[0]
+        print("param mask: ", self.parameter_mask.shape)
+        # mask where we have values for the pixels of selected lines and zeros for other pixels
+        output = torch.bernoulli(output_prob)
         output = output.squeeze()
         #output = output.unsqueeze(1).unsqueeze(1)
-
-        print(torch.where(output>0))
+        print(torch.where(output>0)) #1
         #S_mask_ext = output * self.parameter_mask
         S_mask_ext = torch.einsum("i, ijk->ijk", [output, self.parameter_mask])
         print(S_mask_ext[24][308][733])
         S_mask = torch.max(S_mask_ext, 0)[0]
 
-        return S_mask
+        return S_mask, S_mask_prob
 
 
 

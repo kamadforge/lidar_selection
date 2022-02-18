@@ -125,10 +125,8 @@ parser.add_argument(
     choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
     help='dense | sparse | photo | sparse+photo | dense+photo')
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
-
 #parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
-
-# parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
+# parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_compltion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
 parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
@@ -153,6 +151,8 @@ if args.evaluate == "1":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+elif args.evaluate == "3":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/train/checkpoint_0_i_50000__best.pth.tar"
 
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
@@ -223,6 +223,48 @@ if args.use_pose:
 
 ##################################################################################
 
+#log_baseline_out = None
+#actor_out is a matrix of probabilities for each action/feature
+
+def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, critic_loss):
+    """Custom loss for the actor.
+
+    Args:
+      - y_true:
+        - actor_out: actor output after sampling
+        - critic_out: critic output
+        - baseline_out: baseline output (only for invase)
+      - y_pred: output of the actor network
+
+    Returns:
+      - loss: actor loss
+    """
+
+    #selection = selection.detach()
+    #critic_loss = -torch.sum(y_true * log_critic_out.detach(), dim=1) #hmm how to compute it for depth?? just get critic loss as depth mse
+    model_type="invase_minus"
+    if model_type == 'invase':
+      # Baseline loss
+      baseline_loss = -torch.sum(y_true * log_baseline_out.detach(), dim=1)
+      # Reward
+      Reward = -(critic_loss - baseline_loss)
+    elif model_type == 'invase_minus':
+      Reward = -critic_loss
+    else:
+      raise ValueError
+
+    lamda=1
+    # Policy gradient loss computation.
+    actor_term = torch.sum(selection * torch.log(actor_out + 1e-8) + (1 - selection) * torch.log(1 - actor_out + 1e-8), dim=1)
+    sparcity_term = torch.mean(actor_out, dim=1)
+    # do we put here value, reward or the difference between value and reward?
+    custom_actor_loss = Reward * actor_term - lamda * sparcity_term
+
+    # custom actor loss
+    custom_actor_loss = torch.mean(-custom_actor_loss)
+
+    return custom_actor_loss
+
 def iterate(mode, args, loader, model, optimizer, logger, epoch):
     print("\n\n"+mode+ "\n\n")
     block_average_meter = AverageMeter()
@@ -268,13 +310,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, adjust_features, i, model_orig, args.seed)
             elif args.type_feature == "lines":
                 depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode, args.feature_mode, args.feature_num, i, model_orig, args.seed)
-
-
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
+
+
         data_time = time.time() - start
         start = time.time()
         if mode=="train":
-            sel = modelin(batch_data)
+            sel, actor_prob = modelin(batch_data)
             pred = model(batch_data,sel)
             print("pred", pred.shape)
         else:
@@ -290,6 +332,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         # plt.show()
         # for i in range(im_sq.shape[0]):
         #     print(f"{i} - {np.sum(im_sq[i])}")
+
 
         # compute loss
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
@@ -331,8 +374,20 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             # Loss 3: the depth smoothness loss
             smooth_loss = smoothness_criterion(pred) if args.w2 > 0 else 0
 
-            # backprop
+            # backprop (critic loss here)
             loss = depth_loss + args.w1 * photometric_loss + args.w2 * smooth_loss
+
+            # policy loss
+            log_baseline_out = None  # to compare with baseline
+            log_critic_out = None  # to compare if we have baseline, otherwise unnecessary
+            y_true = None  # to compare if we have baseline, to compute critic and baseline loss
+            # sel - binary matrix for selected features/pixels, size [352,1216]
+            # actor_prob - probabilities for each features/pixel, size [352,1216]
+            print("critic loss: ", loss)
+            policy_loss = actor_loss(sel, log_critic_out, log_baseline_out, y_true, actor_prob, loss)
+            print("policy loss: ", policy_loss)
+            loss+=policy_loss
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -472,10 +527,12 @@ def main():
     global modelin
     modelin = DepthCompletionNetIn(args).to(device)
     model = DepthCompletionNetInMain(args).to(device)
-    model_named_params = [
-        p for _, p in model.named_parameters() if p.requires_grad
-    ]
-    optimizer = torch.optim.Adam(model_named_params,lr=args.lr,weight_decay=args.weight_decay)
+    model_named_params = [p for _, p in model.named_parameters() if p.requires_grad]
+    modelin_named_params = [p for _, p in modelin.named_parameters() if p.requires_grad]
+    total_parameters = model_named_params + modelin_named_params
+    #total_parameters = list(self.critic_net.parameters()) + list(self._actor_net.parameters())
+
+    optimizer = torch.optim.Adam(total_parameters,lr=args.lr,weight_decay=args.weight_decay)
     print("completed.")
     if checkpoint is not None:
         model.load_state_dict(checkpoint['model'])
