@@ -400,7 +400,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
     if args.record_eval_shap:
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
-            file.write("\n"+ ",".join([str(f) for f in features])+":"+str(avg.rmse))
+            file.write("\n"+ ",".join([str(f) for f in features])+":"+"{:.3f}".format(avg.rmse))
 
     return avg, is_best
 
