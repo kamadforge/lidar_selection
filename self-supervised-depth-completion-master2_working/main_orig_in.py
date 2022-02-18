@@ -472,10 +472,12 @@ def main():
     global modelin
     modelin = DepthCompletionNetIn(args).to(device)
     model = DepthCompletionNetInMain(args).to(device)
-    model_named_params = [
-        p for _, p in model.named_parameters() if p.requires_grad
-    ]
-    optimizer = torch.optim.Adam(model_named_params,lr=args.lr,weight_decay=args.weight_decay)
+    model_named_params = [p for _, p in model.named_parameters() if p.requires_grad]
+    modelin_named_params = [p for _, p in modelin.named_parameters() if p.requires_grad]
+    total_parameters = model_named_params + modelin_named_params
+    #total_parameters = list(self.critic_net.parameters()) + list(self._actor_net.parameters())
+
+    optimizer = torch.optim.Adam(total_parameters,lr=args.lr,weight_decay=args.weight_decay)
     print("completed.")
     if checkpoint is not None:
         model.load_state_dict(checkpoint['model'])
