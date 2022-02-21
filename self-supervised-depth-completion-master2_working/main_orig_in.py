@@ -321,7 +321,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             print("pred", pred.shape)
         else:
             with torch.no_grad():
-                sel = modelin(batch_data)
+                sel, actor_prob = modelin(batch_data)
                 pred = model(batch_data, sel)
                 #pred = model(batch_data)
 
@@ -546,12 +546,12 @@ def main():
     print("=> creating data loaders ... ")
     if not is_eval:
         train_dataset = KittiDepth('train', args)
-        train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(1000))
+        train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(10))
         train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True,sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
 
     val_dataset = KittiDepth('val', args)
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(50))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(5))
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 
