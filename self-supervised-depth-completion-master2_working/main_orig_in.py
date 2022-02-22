@@ -242,6 +242,7 @@ def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, c
 
     #selection = selection.detach()
     #critic_loss = -torch.sum(y_true * log_critic_out.detach(), dim=1) #hmm how to compute it for depth?? just get critic loss as depth mse
+    critic_loss = log_critic_out # wedon't have 1 or 0 labels so for each f]pixel we just take the probability
     model_type="invase_minus"
     if model_type == 'invase':
       # Baseline loss
@@ -253,10 +254,13 @@ def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, c
     else:
       raise ValueError
 
-    lamda=1
+    lamda=100000000
     # Policy gradient loss computation.
-    actor_term = torch.sum(selection * torch.log(actor_out + 1e-8) + (1 - selection) * torch.log(1 - actor_out + 1e-8), dim=1)
-    sparcity_term = torch.mean(actor_out, dim=1)
+    #selection [1,352,1216] and [1,352,1216]
+    # we do it over dim 0 and 1 because the features are normally 1-dim but here they're are 2-dim 352*1284 just
+    actor_term = torch.sum(torch.sum(selection * torch.log(actor_out + 1e-8) + (1 - selection) * torch.log(1 - actor_out + 1e-8), dim=1), dim=0)
+    print(actor_term.shape)
+    sparcity_term = torch.mean(torch.mean(actor_out, dim=1), dim=0)
     # do we put here value, reward or the difference between value and reward?
     custom_actor_loss = Reward * actor_term - lamda * sparcity_term
 
@@ -334,6 +338,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         #     print(f"{i} - {np.sum(im_sq[i])}")
 
 
+        #############################
         # compute loss
         depth_loss, photometric_loss, smooth_loss, mask = 0, 0, 0, None
         if mode == 'train':
@@ -379,12 +384,13 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
             # policy loss
             log_baseline_out = None  # to compare with baseline
-            log_critic_out = None  # to compare if we have baseline, otherwise unnecessary
-            y_true = None  # to compare if we have baseline, to compute critic and baseline loss
+            log_critic_out =  loss # for batch =1
+            y_true = None  # for classification problems to compare if we have baseline, to compute critic and baseline loss
             # sel - binary matrix for selected features/pixels, size [352,1216]
             # actor_prob - probabilities for each features/pixel, size [352,1216]
             print("critic loss: ", loss)
             policy_loss = actor_loss(sel, log_critic_out, log_baseline_out, y_true, actor_prob, loss)
+            print("len prob", len(torch.where(actor_prob>1)[0]))
             print("policy loss: ", policy_loss)
             loss+=policy_loss
 
