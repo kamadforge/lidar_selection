@@ -140,6 +140,7 @@ parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "
 parser.add_argument('--test_mode', default="random")
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=-1, type=int)
+parser.add_argument('--lamda', default=10e9, type=int)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 parser.add_argument('--rank_file_global_sq')
@@ -254,7 +255,7 @@ def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, c
     else:
       raise ValueError
 
-    lamda=100000000
+    lamda= args.lamda # 10e8 -> 5-6
     # Policy gradient loss computation.
     #selection [1,352,1216] and [1,352,1216]
     # we do it over dim 0 and 1 because the features are normally 1-dim but here they're are 2-dim 352*1284 just
@@ -262,7 +263,7 @@ def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, c
     print(actor_term.shape)
     sparcity_term = torch.mean(torch.mean(actor_out, dim=1), dim=0)
     # do we put here value, reward or the difference between value and reward?
-    custom_actor_loss = Reward * actor_term - lamda * sparcity_term
+    custom_actor_loss = -Reward * actor_term - lamda * sparcity_term
 
     # custom actor loss
     custom_actor_loss = torch.mean(-custom_actor_loss)
@@ -508,6 +509,7 @@ def main():
             args.rank_file_global_sq = args_new.rank_file_global_sq
             args.layers = args_new.layers
             args.result = args_new.result
+            args.lamda = args_new.lamda
             is_eval = True
             print("Completed.")
         else:
