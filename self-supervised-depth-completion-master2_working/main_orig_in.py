@@ -140,7 +140,7 @@ parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "
 parser.add_argument('--test_mode', default="random")
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=-1, type=int)
-parser.add_argument('--lamda', default=10e9, type=int)
+parser.add_argument('--lamda', default=5*10e9, type=float)
 
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 parser.add_argument('--rank_file_global_sq')
@@ -174,13 +174,20 @@ elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 model_orig = os.path.split(args.evaluate)[1]
 
+args.seed = int(time.time())+np.random.choice(100000)
+
 if args.evaluate != "":
     args.result = f"../results/val/{date_time}"
 else:
     args.result = f"../results/train/{date_time}"
 os.makedirs(args.result, exist_ok=True)
-
-args.seed = int(time.time())+np.random.choice(100000)
+file = open(args.result+"/args.txt", "a+")
+file.write("{\n")
+vars_args = vars(args)
+for k in vars_args.keys():
+    file.write("{}:{}\n".format(k, vars_args[k]))
+file.write("}")
+file.close()
 
 print(args)
 
