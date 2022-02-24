@@ -334,7 +334,8 @@ def depth_read(filename, depth_mode, type_feature, depth_source):
     else:
         print(f"depth {depth_mode} pts: ", len(np.where(depth)[0] > 0))
 
-    return depth, bins #375, 1242 #376, 1241
+    #return depth, bins #375, 1242 #376, 1241
+    return depth
 
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
@@ -541,10 +542,8 @@ class KittiDepth(data.Dataset):
     def __getraw__(self, index):
         rgb = rgb_read(self.paths['rgb'][index]) if \
             (self.paths['rgb'][index] is not None and (self.args.use_rgb or self.args.use_g)) else None
-        sparse, bins = depth_read(self.paths['d'][index], "sparse", self.type_feature, self.sparse_depth_source) if \
-            (self.paths['d'][index] is not None and self.args.use_d) else None
-        target, bins_gt = depth_read(self.paths['gt'][index], "gt", self.type_feature, self.sparse_depth_source) if \
-            self.paths['gt'][index] is not None else None
+        sparse = depth_read(self.paths['d'][index], "sparse", self.type_feature, self.sparse_depth_source) if (self.paths['d'][index] is not None and self.args.use_d) else None
+        target = depth_read(self.paths['gt'][index], "gt", self.type_feature, self.sparse_depth_source) if self.paths['gt'][index] is not None else None
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
         #draw_features(rgb, bins)

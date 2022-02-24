@@ -132,7 +132,7 @@ parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 
-parser.add_argument('--depth_adjust', default=1, type=int) #if we use all depth or subset of depth feature
+parser.add_argument('--depth_adjust', default=0, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 
@@ -245,8 +245,9 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         print(sparse_depth_pathname)
         del batch_data['d_path']
         print ("i: ", i)
-        print(f"depth (sparse) points: {len(torch.where(batch_data['d']>0)[0])}")
-        print(f"gt depth (dense) points: {len(torch.where(batch_data['gt'] > 0)[0])}")
+        if args.use_d:
+            print(f"depth (sparse) points: {len(torch.where(batch_data['d']>0)[0])}")
+            print(f"gt depth (dense) points: {len(torch.where(batch_data['gt'] > 0)[0])}")
         start = time.time()
         batch_data = {
             key: val.to(device)
