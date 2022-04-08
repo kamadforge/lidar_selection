@@ -8,6 +8,7 @@ import time
 import datetime
 now = datetime.datetime.now()
 date_time = now.strftime("%Y_%m_%d_%H:%M")
+import sys
 
 import torch
 import torch.nn.parallel
@@ -182,6 +183,7 @@ os.makedirs(args.result, exist_ok=True)
 args.seed = int(time.time())+np.random.choice(100000)
 
 print(args)
+print(sys.argv[1:])
 
 
 print("\nEvaluate: ", args.evaluate)

@@ -83,7 +83,7 @@ parser.add_argument('--print-freq',
                     help='print frequency (default: 10)')
 parser.add_argument('--resume',
                     '-r',
-                    default='',
+                    default='1',
                     type=str,
                     metavar='PATH',
                     help='path to latest checkpoint (default: none)')
@@ -131,10 +131,16 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--instancewise', default=0, type=int)
+parser.add_argument('--instancewise', default=1, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--every', default=30, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
+parser.add_argument('--seed', default=120, type=int)
+parser.add_argument('--splits_total', 100, type=int)
+# irrelevant for qfit
+parser.add_argument('--depth_adjust', default=0, type=int) #if we use all depth or subset of depth feature
+parser.add_argument('--test_mode', default="random")
+parser.add_argument('--feature_num', default=-1, type=int)
 args = parser.parse_args()
 
 
@@ -186,6 +192,7 @@ args.save_checkpoint_path = ""
 
 
 print(args)
+print(sys.argv[1:])
 
 # cuda computation
 cuda = torch.cuda.is_available() and not args.cpu
@@ -534,7 +541,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             #is_best = True #saving all the checkpoints
             if is_best and not (mode == "train"):
                 logger.save_img_comparison_as_best(mode, epoch)
-            logger.conditional_summarize(mode, avg, is_best)
+            logger.conditional_summarize(mode, avg, is_best, args, i)
 
             #if mode == "train":
             #    if args.save_checkpoint_bool:
@@ -600,6 +607,12 @@ def main():
             args.type_feature = args_new.type_feature
             args.instancewise = args_new.instancewise
             args.sparse_depth_source = args_new.sparse_depth_source
+            args.seed = args_new.seed
+            # irrelevant
+            args.depth_adjust = args_new.depth_adjust
+            args.test_mode = args_new.test_mode
+            args.feature_num = args_new.feature_num
+            args.splits_total = args_new.splits_total
             is_eval = True
             print("Completed.")
         else:
@@ -617,6 +630,12 @@ def main():
             args.sparse_depth_source = args_new.sparse_depth_source
             args.val = args_new.val
             args.save_checkpoint_path = args_new.save_checkpoint_path
+            args.seed = args_new.seed
+            args.splits_total = args_new.splits_total
+            # irrelevant
+            args.depth_adjust = args_new.depth_adjust
+            args.test_mode = args_new.test_mode
+            args.feature_num = args_new.feature_num
             print("Completed. Resuming from epoch {}.".format(
                 checkpoint['epoch']))
         else:
@@ -736,7 +755,7 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print(f"\n\n=> starting {bif_mode} training epoch {epoch} .. \n\n")
-        splits_total=500 #30
+        splits_total=args.splits_total #30
         for split_it, subdatloader in enumerate(split_dataset(train_dataset, splits_total)):
             print("subdataloader: ", split_it)
             is_eval = False

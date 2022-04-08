@@ -8,6 +8,7 @@ import time
 import datetime
 now = datetime.datetime.now()
 date_time = now.strftime("%Y_%m_%d_%H:%M")
+import sys
 
 import torch
 import torch.nn.parallel
@@ -190,7 +191,7 @@ file.write("}")
 file.close()
 
 print(args)
-
+print(sys.argv[1:])
 
 print("\nEvaluate: ", args.evaluate)
 print(f"input: {args.input} from {args.sparse_depth_source}")
@@ -271,6 +272,7 @@ def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, c
     sparcity_term = torch.mean(torch.mean(actor_out, dim=1), dim=0)
     # do we put here value, reward or the difference between value and reward?
     custom_actor_loss = -Reward * actor_term - lamda * sparcity_term
+
 
     # custom actor loss
     custom_actor_loss = torch.mean(-custom_actor_loss)
