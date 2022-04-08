@@ -271,7 +271,7 @@ def actor_loss(selection, log_critic_out, log_baseline_out, y_true, actor_out, c
     print(actor_term.shape)
     sparcity_term = torch.mean(torch.mean(actor_out, dim=1), dim=0)
     # do we put here value, reward or the difference between value and reward?
-    custom_actor_loss = -Reward * actor_term - lamda * sparcity_term
+    custom_actor_loss = -Reward * actor_term + lamda * sparcity_term
 
 
     # custom actor loss
