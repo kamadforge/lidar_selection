@@ -222,7 +222,7 @@ def adjust_learning_rate(lr_init, optimizer, epoch):
         param_group['lr'] = lr
     return lr
 
-def get_save_path(epoch, output_directory, type_feature, test_mode, feature_num, feature_mode, depth_adjust, i, best):
+def get_save_path(epoch, output_directory, type_feature=None, test_mode=None, feature_num=None, feature_mode=None, depth_adjust=0, i=0, best=0):
 
     info_str = ""
     if depth_adjust:

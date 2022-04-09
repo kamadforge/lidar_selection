@@ -136,7 +136,7 @@ parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--every', default=30, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 parser.add_argument('--seed', default=120, type=int)
-parser.add_argument('--splits_total', 100, type=int)
+parser.add_argument('--splits_total', default=2, type=int)
 # irrelevant for qfit
 parser.add_argument('--depth_adjust', default=0, type=int) #if we use all depth or subset of depth feature
 parser.add_argument('--test_mode', default="random")
@@ -566,7 +566,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             if args.evaluate:
                 folder_and_name = args.evaluate.split(os.sep)[-3:]
             else:
-                folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, i_total_train, qnet=True)
+                folder_and_name = helper.get_save_path(epoch, logger.output_directory, args.type_feature, None, None, None, 0, i_total_train, 0)
                 folder_and_name = folder_and_name.split(os.sep)[-3:]
                 print("save checkpoint path", args.save_checkpoint_path)
         ranks_save_dir = f"ranks/{args.type_feature}/instance/{folder_and_name[0]}/{folder_and_name[1]}"
@@ -722,9 +722,9 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000)) #1000
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(10)) #1000
     val_loader = torch.utils.data.DataLoader(
-        val_dataset_sub,
+        val_dataset,
         batch_size=1,
         shuffle=False,
         num_workers=0,
