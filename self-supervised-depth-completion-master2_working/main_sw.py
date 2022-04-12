@@ -24,7 +24,7 @@ from metrics import AverageMeter, Result
 import criteria
 import helper
 from inverse_warp import Intrinsics, homography_from
-#from script_test_all import test_features_in_checkpoint, test_switch
+from script_test_all import test_features_in_checkpoint, test_switch
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,7 +42,7 @@ parser.add_argument('-w',
                     metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs',
-                    default=11,
+                    default=20,
                     type=int,
                     metavar='N',
                     help='number of total epochs to run (default: 11)')
@@ -83,7 +83,7 @@ parser.add_argument('--print-freq',
                     help='print frequency (default: 10)')
 parser.add_argument('--resume',
                     '-r',
-                    default='1',
+                    default='3',
                     type=str,
                     metavar='PATH',
                     help='path to latest checkpoint (default: none)')
@@ -101,7 +101,7 @@ parser.add_argument('-i',
 parser.add_argument('-l',
                     '--layers',
                     type=int,
-                    default=34,
+                    default=18,
                     help='use 16 for sparse_conv; use 18 or 34 for resnet')
 parser.add_argument('--pretrained',
                     action="store_true",
@@ -131,9 +131,9 @@ parser.add_argument(
 parser.add_argument('-e', '--evaluate', default='', type=str, metavar='PATH')
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--instancewise', default=1, type=int)
+parser.add_argument('--instancewise', default=0, type=int)
 parser.add_argument('--sparse_depth_source', default='nonbin')
-parser.add_argument('--every', default=30, type=int) #saving checkpoint every k images
+parser.add_argument('--every', default=1000, type=int) #saving checkpoint every k images
 parser.add_argument('--save_checkpoint_bool', default=0)
 parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--splits_total', default=2, type=int)
@@ -165,6 +165,8 @@ if args.resume == "1":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.resume == "2":
     args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+elif args.resume =="3":
+    args.resume = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/scratch/checkpoint_10_i_85000__best.pth.tar"
     
 t = torch.cuda.get_device_properties(0).total_memory
 r = torch.cuda.memory_reserved(0)
@@ -417,8 +419,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             print(np.argsort(S_numpy, None)[-10:])
 
 
-        # Global training
-        if ((i_total % args.every ==0 or i ==len(loader)-1 ) and i_total != 0 and mode=="train" and not args.instancewise and model.module.phi is not None):
+        if i_total % 100:
 
             np.set_printoptions(precision=6)
 
@@ -430,6 +431,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             print("and")
             print(switches_2d_argsort[-10:])
             print(switches_2d_sort[-10:])
+
+        # Global training
+        if ((i_total % args.every ==0 or i ==len(loader)-1 ) and i_total != 0 and mode=="train" and not args.instancewise and model.module.phi is not None):
+
+
 
             ##### saving global ranks
             # note: local ones we save during the test below
