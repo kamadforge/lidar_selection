@@ -419,7 +419,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             print(np.argsort(S_numpy, None)[-10:])
 
 
-        if i_total % 100:
+        if i_total % 100 ==0:
 
             np.set_printoptions(precision=6)
 
@@ -549,17 +549,17 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
                 logger.save_img_comparison_as_best(mode, epoch)
             logger.conditional_summarize(mode, avg, is_best, args, i)
 
-            #if mode == "train":
-            #    if args.save_checkpoint_bool:
-            #        print("saving checkpoint at ", i_total)
-            #        global save_checkpoint_path
-            #        args.save_checkpoint_path = helper.save_checkpoint({  # save checkpoint
-            #            'epoch': epoch,
-            #            'model': model.module.state_dict(),
-            #            'best_result': logger.best_result,
-            #            'optimizer': optimizer.state_dict(),
-            #            'args': args,
-            #        }, is_best, epoch, logger.output_directory, args.type_feature, i_total, every, qnet=True)
+            if mode == "train":
+               if args.save_checkpoint_bool:
+                   print("saving checkpoint at ", i_total)
+                   global save_checkpoint_path
+                   args.save_checkpoint_path = helper.save_checkpoint({  # save checkpoint
+                       'epoch': epoch,
+                       'model': model.module.state_dict(),
+                       'best_result': logger.best_result,
+                       'optimizer': optimizer.state_dict(),
+                       'args': args,
+                   }, is_best, epoch, logger.output_directory, args.type_feature, i_total, every, qnet=True)
     # end for i in batch loader
 
     # get the instancewise ranks for forward passes for each of the test images
