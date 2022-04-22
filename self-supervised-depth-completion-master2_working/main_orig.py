@@ -488,7 +488,7 @@ def main():
         print("\t==> train_loader size:{}".format(len(train_loader)))
     val_dataset = KittiDepth('val', args)
 
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(25))
     val_loader = torch.utils.data.DataLoader(val_dataset_sub, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 

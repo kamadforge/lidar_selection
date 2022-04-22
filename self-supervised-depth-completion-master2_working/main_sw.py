@@ -186,6 +186,7 @@ args.use_d = 'd' in args.input
 args.use_g = 'g' in args.input
 if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
+    
 else:
     args.w1, args.w2 = 0, 0
 
@@ -728,9 +729,9 @@ def main():
     #     num_workers=2,
     #     pin_memory=True)  # set batch size to be 1 for validation
     # print("\t==> val_loader size:{}".format(len(val_loader)))
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(10)) #1000
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(20)) #1000
     val_loader = torch.utils.data.DataLoader(
-        val_dataset,
+        val_dataset_sub,
         batch_size=1,
         shuffle=False,
         num_workers=0,

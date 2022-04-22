@@ -524,7 +524,7 @@ class DepthCompletionNetQLines(nn.Module):
 
         num = 352
         num = 65
-        self.parameter = Parameter(-1e-10 * torch.ones((num)), requires_grad=True)
+        self.parameter = Parameter(-1e-3 * torch.ones((num)), requires_grad=True) #-1e-10
         self.parameter_mask = torch.Tensor(np.load("features/kitti_pixels_to_lines_masks.npy", allow_pickle=True)).to(device)
         self.phi = None
 
