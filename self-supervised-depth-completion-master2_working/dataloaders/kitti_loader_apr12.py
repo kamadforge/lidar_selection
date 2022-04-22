@@ -503,6 +503,9 @@ class KittiDepth(data.Dataset):
         rgb_near = get_rgb_near(self.paths['rgb'][index], self.args) if \
             self.split == 'train' and self.args.use_pose else None
         draw_features(rgb, bins)
+        # subtracting the mean
+        sparse = sparse - np.mean(sparse)
+        target = target - np.mean(target)
         return rgb, sparse, target, rgb_near
 
     def __getitem__(self, index):
