@@ -644,12 +644,12 @@ class DepthCompletionNetQLines(nn.Module):
         # Slen=len(S)
         # S_expand = S.repeat(x['d'].shape[-1]).reshape(Slen, x['d'].shape[-1])
         # output = x['d'] * S_expand
-
+        #0.1929 aver
         # switch mask
         S_mask_ext = torch.einsum("i, ijk->ijk", [S, self.parameter_mask])
-        print(S_mask_ext[24][308][733])
+        #S_mask_ext has dims  torch.Size([65, 352, 1216]), we choose the max amone all the lines
         S_mask = torch.max(S_mask_ext, 0)[0]
-
+        #S_mask[S_mask == 0] = 0.1929 # mean instead of 0
         # for i in range(len(self.parameter)):
         #     print(f"{i}: {len(np.where(S_mask_ind.detach().cpu().numpy() == i)[0])}")
         output = x['d'] * S_mask

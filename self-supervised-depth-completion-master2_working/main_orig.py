@@ -144,7 +144,8 @@ parser.add_argument('--test_mode', default="random")
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=-1, type=int)
 
-parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
+parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/checkpoint_10_i_85000__best.pth.tar/global/Ss_val_ep_11_it_7.npy")
+#"/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy"
 parser.add_argument('--rank_file_global_sq')
 
 parser.add_argument('--draw_features_rgb', default=0)

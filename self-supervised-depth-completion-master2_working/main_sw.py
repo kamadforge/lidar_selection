@@ -65,7 +65,7 @@ parser.add_argument('-b',
                     help='mini-batch size (default: 1)')
 parser.add_argument('--lr',
                     '--learning-rate',
-                    default=1e-4, #1e-5
+                    default=1e-1, #1e-5
                     type=float,
                     metavar='LR',
                     help='initial learning rate (default 1e-5)')
@@ -305,7 +305,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch, splits_num=100,
             with torch.no_grad():
                 pred = model(batch_data)
 
-        print("Sum test: ", torch.sum(batch_data['d'][0:5]))
+        #print("Sum test: ", torch.sum(batch_data['d'][0:5]))
 
         vis=False
         if vis:
