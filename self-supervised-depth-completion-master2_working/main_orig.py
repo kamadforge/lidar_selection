@@ -61,16 +61,16 @@ parser.add_argument('-m', '--train-mode', type=str, default="dense",
 parser.add_argument('-e', '--evaluate', default='1', type=str, metavar='PATH')
 # parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
 # parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
-parser.add_argument('--record_eval_shap', default=0, type=int)
+parser.add_argument('--record_eval_shap', default=1, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--depth_adjust', default=1, type=int)  # if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="spaced")
+parser.add_argument('--test_mode', default="random")
 parser.add_argument('--feature_mode', default='global')
-parser.add_argument('--feature_num', default=20, type=int)
+parser.add_argument('--feature_num', default=3, type=int)
 parser.add_argument('--ranks_file',
                     default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 # "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/checkpoint_10_i_85000__best.pth.tar/global/Ss_val_ep_11_it_7.npy")
@@ -102,6 +102,9 @@ if args.evaluate != "":
     args.result = f"../results/val/{date_time}"
 else:
     args.result = f"../results/train/{date_time}"
+evaluate_path_split=args.evaluate.split("/")
+if args.record_eval_shap:
+    os.makedirs(f"ranks/lines/instance/shap/" + evaluate_path_split[-1], exist_ok=True)
 os.makedirs(args.result, exist_ok=True)
 args.seed = int(time.time()) + np.random.choice(100000)
 print(args)
@@ -166,6 +169,11 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         sparse_depth_pathname = batch_data['d_path'][0]
         print(sparse_depth_pathname)
+        if args.record_eval_shap:
+            depth_path_split = sparse_depth_pathname.split("/")
+            filename = f"ranks/lines/instance/shap/{evaluate_path_split[-1]}/{depth_path_split[-1][:-4]}.txt"
+            if not os.path.exists(filename):
+                open(filename, "w").close()
         del batch_data['d_path']
         print("i: ", i)
         if args.use_d:
@@ -184,7 +192,6 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
         if depth_adjust and args.use_d:
             if args.type_feature == "sq":
                 if args.use_rgb:
-
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode,args.feature_mode,args.feature_num,adjust_features, i, model_orig,args.seed, batch_data['rgb'])
                 else:
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode,args.feature_mode,args.feature_num,adjust_features, i, model_orig,args.seed)
@@ -271,6 +278,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_print(mode, i, epoch, lr, len(loader), block_average_meter, average_meter)
             logger.conditional_save_img_comparison(mode, i, batch_data, pred, epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
+
+            if args.record_eval_shap:
+                with open(filename, "a+") as file:
+                    file.write("\n" + ",".join([str(f) for f in features]) + ":" + "{:.3f}".format(result.rmse))
 
         # save log and checkpoint
         every = len(loader) - 1 if mode == "val" else 1000  # 200
@@ -360,15 +371,15 @@ def main():
     # DATA
     print("=> creating data loaders ... ")
     if not is_eval:
+        # train dataset
         train_dataset = KittiDepth('train', args)
         train_dataset_sub = torch.utils.data.Subset(train_dataset, torch.arange(10))
-        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                                                   num_workers=args.workers, pin_memory=True, sampler=None)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers, pin_memory=True, sampler=None)
         print("\t==> train_loader size:{}".format(len(train_loader)))
+    # test dataset
     val_dataset = KittiDepth('val', args)
-    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1000))
-    val_loader = torch.utils.data.DataLoader(val_dataset_sub, batch_size=1, shuffle=False, num_workers=0,
-                                             pin_memory=True)  # set batch size to be 1 for validation
+    val_dataset_sub = torch.utils.data.Subset(val_dataset, torch.arange(1))
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0,pin_memory=True)  # set batch size to be 1 for validation
     print("\t==> val_loader size:{}".format(len(val_loader)))
 
     # create backups and results folder
@@ -388,14 +399,12 @@ def main():
     print("=> starting main loop ...")
     for epoch in range(args.start_epoch, args.epochs):
         print("=> starting training epoch {} ..".format(epoch))
-        # train
-        iterate("train", args, train_loader, model, optimizer, logger, epoch)  # train for one epoch
-        # evaluate
-        result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)  # evaluate on validation set
-        helper.save_checkpoint({'epoch': epoch, 'model': model.module.state_dict(), 'best_result': logger.best_result,
-                                'optimizer': optimizer.state_dict(), 'args': args}, is_best, epoch,
-                               logger.output_directory, args.type_feature, args.test_mode, args.feature_num,
-                               args.feature_mode, args.depth_adjust)
+        # train for one epoch
+        iterate("train", args, train_loader, model, optimizer, logger, epoch)
+        # evaluate on the val set
+        result, is_best = iterate("val", args, val_loader, model, None, logger, epoch)
+        # save
+        helper.save_checkpoint({'epoch': epoch, 'model': model.module.state_dict(), 'best_result': logger.best_result,'optimizer': optimizer.state_dict(), 'args': args}, is_best, epoch, logger.output_directory, args.type_feature, args.test_mode, args.feature_num,args.feature_mode, args.depth_adjust)
 
 
 if __name__ == '__main__':
