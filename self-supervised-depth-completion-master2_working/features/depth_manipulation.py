@@ -5,7 +5,7 @@
 
 import numpy as np
 import os
-
+from PIL import Image
 
 from scipy.stats import binned_statistic_2d
 
@@ -232,7 +232,7 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
 
 
 
-def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, model_orig, seed=116):
+def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, model_orig, filename, seed=116):
 
 
     depth = depth.detach().cpu().numpy().squeeze()
@@ -258,6 +258,8 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
     elif "custom" in test_mode:
         lines = [6,21,20,17,47,5,4,24,37,23,32,27,35,2,53,41,16,11,49,59,56,51,50,52,10,54,63,62,57,60,61,64]
         #[44,29,34,42,30,43,19,36,5,21,8,1,53,27,13,51,25,2,49,41,4,62,31,0,14,12,59,45,24,26,32,18,39,17, 20,33,47,6,15,16,22,9,40,35,28,10,48,38,55,11,23,58,52,7,54,3,50,57,56,63,61,60,46,64,37
+    elif "all" in test_mode:
+        lines = lines
     if test_mode == "random":
         if feature_mode == "global":
             np.random.seed(seed) # comment to get local random
@@ -268,6 +270,15 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
         #lines = np.linspace(0, lines_num, lines_selected, dtype=int)
 
         lines = np.append(lines, 64)
+
+    elif test_mode == "shap":
+        if feature_mode == "local":
+            dic = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict.npy", allow_pickle=True)
+            lines = dic[()][filename]
+            dummy=[]
+        elif feature_mode == "global":
+            lines = [6,21,20,17,47,5,4,24,37,23,32,27,35,2,53,41,16,11,49,59,56,51,50,52,10,54,63,62,57,60,61,64]
+        lines = lines[-feature_num:]
     elif test_mode == "most":
 
         # all points in a mask
@@ -331,8 +342,13 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
         for p, item in enumerate(lines):
             mask_new = mask_new+masks[item]
 
+        depth_old = depth.copy()
         depth=mask_new*depth
+        diff = depth_old - depth
 
+        #plt.imshow(data, interpolation='nearest')
+        #img = Image.fromarray(diff, mode='1')
+        #img.show()
 
         #save_pic(mask_new, test_mode)
 

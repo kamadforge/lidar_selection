@@ -32,47 +32,35 @@ import numpy as np
 # ARGUMENTS
 
 parser = argparse.ArgumentParser(description='Sparse-to-Dense')
-parser.add_argument('-w', '--workers', default=0, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+parser.add_argument('-w', '--workers', default=0, type=int, metavar='N', help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=11, type=int, metavar='N', help='number of total epochs to run (default: 11)')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number (useful on restarts)')
-parser.add_argument('-c', '--criterion', metavar='LOSS', default='l2', choices=criteria.loss_names,
-                    help='loss function: | '.join(criteria.loss_names) + ' (default: l2)')
+parser.add_argument('-c', '--criterion', metavar='LOSS', default='l2', choices=criteria.loss_names, help='loss function: | '.join(criteria.loss_names) + ' (default: l2)')
 parser.add_argument('-b', '--batch-size', default=1, type=int, help='mini-batch size (default: 1)')
-parser.add_argument('--lr', '--learning-rate', default=1e-5, type=float, metavar='LR',
-                    help='initial learning rate (default 1e-5)')
+parser.add_argument('--lr', '--learning-rate', default=1e-5, type=float, metavar='LR',  help='initial learning rate (default 1e-5)')
 parser.add_argument('--weight-decay', '--wd', default=0, type=float, metavar='W', help='weight decay (default: 0)')
 parser.add_argument('--print-freq', '-p', default=10, type=int, metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
 parser.add_argument('--data-folder', default='../data', type=str, metavar='PATH', help='data folder (default: none)')
-parser.add_argument('-i', '--input', type=str, default='gd', choices=input_options,
-                    help='input: | '.join(input_options))
-parser.add_argument('-l', '--layers', type=int, default=34, help='use 16 for sparse_conv; use 18 or 34 for resnet')
+parser.add_argument('-i', '--input', type=str, default='gd', choices=input_options,help='input: | '.join(input_options))
+parser.add_argument('-l', '--layers', type=int, default=18, help='use 16 for sparse_conv; use 18 or 34 for resnet')
 parser.add_argument('--pretrained', action="store_true", help='use ImageNet pre-trained weights')
-parser.add_argument('--val', type=str, default="select", choices=["select", "full"],
-                    help='full or select validation set')
+parser.add_argument('--val', type=str, default="select", choices=["select", "full"], help='full or select validation set')
 parser.add_argument('--jitter', type=float, default=0.1, help='color jitter for images')
-parser.add_argument('--rank-metric', type=str, default='rmse',
-                    choices=[m for m in dir(Result()) if not m.startswith('_')],
-                    help='metrics for which best result is sbatch_datacted')
-parser.add_argument('-m', '--train-mode', type=str, default="dense",
-                    choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"],
-                    help='dense | sparse | photo | sparse+photo | dense+photo')
-parser.add_argument('-e', '--evaluate', default='1', type=str, metavar='PATH')
-# parser.add_argument('-e', '--evaluate', default='/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar')
-# parser.add_argument('-e', '--evaluate', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=d.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-03@21-17/checkpoint--1_i_85850_typefeature_None.pth.tar")
-parser.add_argument('--record_eval_shap', default=1, type=int)
+parser.add_argument('--rank-metric', type=str, default='rmse', choices=[m for m in dir(Result()) if not m.startswith('_')], help='metrics for which best result is sbatch_datacted')
+parser.add_argument('-m', '--train-mode', type=str, default="dense", choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"], help='dense | sparse | photo | sparse+photo | dense+photo')
+parser.add_argument('-e', '--evaluate', default='3', type=str, metavar='PATH')
+parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
 parser.add_argument('--depth_adjust', default=1, type=int)  # if we use all depth or subset of depth feature
 parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="random")
-parser.add_argument('--feature_mode', default='global')
-parser.add_argument('--feature_num', default=3, type=int)
-parser.add_argument('--ranks_file',
-                    default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
+parser.add_argument('--test_mode', default="all")
+parser.add_argument('--feature_mode', default='local')
+parser.add_argument('--feature_num', default=100, type=int)
+parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 # "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/checkpoint_10_i_85000__best.pth.tar/global/Ss_val_ep_11_it_7.npy")
 # "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy"
 parser.add_argument('--rank_file_global_sq')
@@ -82,6 +70,8 @@ if args.evaluate == "1":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
 elif args.evaluate == "2":
     args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
+elif args.evaluate =="3":
+    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/checkpoint_10_i_85000__best.pth.tar"
 args.use_pose = ("photo" in args.train_mode)
 # args.pretrained = not args.no_pretrained
 # args.result = os.path.join('..', 'results')
@@ -93,10 +83,6 @@ if args.use_pose:
     args.w1, args.w2 = 0.1, 0.1
 else:
     args.w1, args.w2 = 0, 0
-if args.evaluate == "1":
-    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-04-01@19-36/checkpoint--1_i_16600_typefeature_None.pth.tar"
-elif args.evaluate == "2":
-    args.evaluate = "/home/kamil/Dropbox/Current_research/depth_completion_opt/results/good/mode=dense.input=gd.resnet34.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2021-05-24@22-50_2/checkpoint_qnet-9_i_0_typefeature_None.pth.tar"
 model_orig = os.path.split(args.evaluate)[1]
 if args.evaluate != "":
     args.result = f"../results/val/{date_time}"
@@ -168,12 +154,14 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     for i, batch_data in enumerate(loader):
 
         sparse_depth_pathname = batch_data['d_path'][0]
+
         print(sparse_depth_pathname)
+        depth_path_split = sparse_depth_pathname.split("/")
+        filename = depth_path_split[-1][:-4]
         if args.record_eval_shap:
-            depth_path_split = sparse_depth_pathname.split("/")
-            filename = f"ranks/lines/instance/shap/{evaluate_path_split[-1]}/{depth_path_split[-1][:-4]}.txt"
-            if not os.path.exists(filename):
-                open(filename, "w").close()
+            filepath = f"ranks/lines/instance/shap/{evaluate_path_split[-1]}/{filename}.txt"
+            if not os.path.exists(filepath):
+                open(filepath, "w").close()
         del batch_data['d_path']
         print("i: ", i)
         if args.use_d:
@@ -196,7 +184,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode,args.feature_mode,args.feature_num,adjust_features, i, model_orig,args.seed)
             elif args.type_feature == "lines":
-                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode,args.feature_mode, args.feature_num,i, model_orig, args.seed)
+                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode,args.feature_mode, args.feature_num,i, model_orig, filename, args.seed)
 
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
         data_time = time.time() - start
@@ -280,7 +268,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_save_pred(mode, i, pred, epoch)
 
             if args.record_eval_shap:
-                with open(filename, "a+") as file:
+                with open(filepath, "a+") as file:
                     file.write("\n" + ",".join([str(f) for f in features]) + ":" + "{:.3f}".format(result.rmse))
 
         # save log and checkpoint
