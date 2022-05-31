@@ -6,6 +6,7 @@
 import numpy as np
 import os
 from PIL import Image
+import socket
 
 from scipy.stats import binned_statistic_2d
 
@@ -14,6 +15,10 @@ from features.show_lines import save_pic
 
 # print("bins shape", bins_2d_depth.statistic.shape)
 
+if socket.gethostname()=="kamilblade":
+    home_dir = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/"
+else:
+    home_dir="/home/kadamczewski/Dropbox_from/Current_research/depth_completion/self-supervised-depth-completion-master2_working/"
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
 
@@ -273,7 +278,7 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
 
     elif test_mode == "shap":
         if feature_mode == "local":
-            dic = np.load("/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict.npy", allow_pickle=True)
+            dic = np.load(home_dir+ "ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict.npy", allow_pickle=True)
             lines = dic[()][filename]
             dummy=[]
         elif feature_mode == "global":
