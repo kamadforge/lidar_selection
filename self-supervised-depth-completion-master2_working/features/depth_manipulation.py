@@ -22,6 +22,18 @@ else:
 
 #for all the points in the bin we want to change for a fixed set of points so that each bin has the number equally spaced points
 
+def space_lines(lines, num):
+    # num+1 because we don't take into account 0, which is its own bin
+    bins = np.linspace(1,65,num+1) # 1, 17, 33, 49, 65 (65 doesn't count)
+    indices = np.digitize(lines, bins)
+    inds_best = []
+    for i in range(num+1):
+        ind= np.where(indices==i)[0][-1]
+        inds_best.append(lines[ind])
+        #print(inds_best)
+
+    return inds_best[1:]
+
 def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter,  model_orig, seed, rgb=None, sub_iter=None):
 
     #depth_points[0] - ver coordinates of posiitve dept points
@@ -274,12 +286,22 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
         lines = np.arange(0,lines_num, int(lines_num/lines_selected))
         #lines = np.linspace(0, lines_num, lines_selected, dtype=int)
 
-        lines = np.append(lines, 64)
+        interval = int(64/lines_selected)
+
+        lines=[]
+        a =64
+        while a >0:
+            lines.append(a)
+            a = a -interval
+
+        dum=0
+
 
     elif test_mode == "shap":
         if feature_mode == "local":
-            dic = np.load(home_dir+ "ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict.npy", allow_pickle=True)
+            dic = np.load(home_dir+ "ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict_normal.npy", allow_pickle=True)
             lines = dic[()][filename]
+            lines = space_lines(lines, feature_num) #it is smaller than 64, should be the same as feature_num
             dummy=[]
         elif feature_mode == "global":
             lines = [6,21,20,17,47,5,4,24,37,23,32,27,35,2,53,41,16,11,49,59,56,51,50,52,10,54,63,62,57,60,61,64]
