@@ -32,7 +32,23 @@ def space_lines(lines, num):
         inds_best.append(lines[ind])
         #print(inds_best)
 
-    return inds_best[1:]
+    return inds_best[-num:]
+
+def space_k_lines(lines, num, space):
+    lines_sel=[]
+    for i in range(num+1):
+        for l in lines[::-1]:
+            far=1 # if the new line is far enough from all the other previous lines
+            for ls in lines_sel:
+                if np.abs(l - ls)<=space:
+                    far=0
+            if far:
+                lines_sel.append(l)
+
+    lines_sel = lines_sel[::-1]
+    return lines_sel
+
+
 
 def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter,  model_orig, seed, rgb=None, sub_iter=None):
 
@@ -254,6 +270,8 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
 
     depth = depth.detach().cpu().numpy().squeeze()
     masks = np.load("features/kitti_pixels_to_lines_masks.npy")
+    masks = np.load("features/kitti_globalmap_jun22_all.npy")
+    print("No points assigned: ", len(np.where(np.sum(masks, axis=0) == 0)[0]), " out of ", 352 * 1216)
 
     # choose ranks for the squares
     select_mask=True # to create a mask with 1s for selected squates and 0 otherwise
@@ -301,7 +319,8 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
         if feature_mode == "local":
             dic = np.load(home_dir+ "ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict_normal.npy", allow_pickle=True)
             lines = dic[()][filename]
-            lines = space_lines(lines, feature_num) #it is smaller than 64, should be the same as feature_num
+            #lines = space_lines(lines, feature_num) #it is smaller than 64, should be the same as feature_num
+            lines = space_k_lines(lines, feature_num, 1)
             dummy=[]
         elif feature_mode == "global":
             lines = [6,21,20,17,47,5,4,24,37,23,32,27,35,2,53,41,16,11,49,59,56,51,50,52,10,54,63,62,57,60,61,64]
