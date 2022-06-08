@@ -61,6 +61,10 @@ parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "
 parser.add_argument('--test_mode', default="all")
 parser.add_argument('--feature_mode', default='local')
 parser.add_argument('--feature_num', default=32, type=int)
+
+parser.add_argument('--region_shap', default=0, type=int)
+parser.add_argument('--separation_shap', default=0, type=int)
+
 parser.add_argument('--ranks_file', default="/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy")
 # "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/checkpoint_10_i_85000__best.pth.tar/global/Ss_val_ep_11_it_7.npy")
 # "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/16600_switches_2D_equal_iter_3990.npy"
@@ -185,7 +189,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode,args.feature_mode,args.feature_num,adjust_features, i, model_orig,args.seed)
             elif args.type_feature == "lines":
-                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(batch_data['d'], args.test_mode,args.feature_mode, args.feature_num,i, model_orig, sparse_depth_pathname, args.seed)
+                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(args, batch_data['d'], args.test_mode,args.feature_mode, args.feature_num,i, model_orig, sparse_depth_pathname, args.seed)
 
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
         data_time = time.time() - start

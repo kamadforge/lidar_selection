@@ -265,11 +265,11 @@ def depth_adjustment(depth, test_mode, feature_mode, feature_num, adjust, iter, 
 
 
 
-def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, model_orig, filename, seed=116):
+def depth_adjustment_lines(args, depth, test_mode, feature_mode, feature_num, iter, model_orig, filename, seed=116):
 
 
     depth = depth.detach().cpu().numpy().squeeze()
-    masks = np.load("features/kitti_pixels_to_lines_masks.npy")
+    #masks = np.load("features/kitti_pixels_to_lines_masks.npy")
     masks = np.load("features/kitti_globalmap_jun22_all.npy")
     print("No points assigned: ", len(np.where(np.sum(masks, axis=0) == 0)[0]), " out of ", 352 * 1216)
 
@@ -319,9 +319,10 @@ def depth_adjustment_lines(depth, test_mode, feature_mode, feature_num, iter, mo
         if feature_mode == "local":
             dic = np.load(home_dir+ "ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/shapimp_dict_normal.npy", allow_pickle=True)
             lines = dic[()][filename]
-            #lines = space_lines(lines, feature_num) #it is smaller than 64, should be the same as feature_num
-            lines = space_k_lines(lines, feature_num, 1)
-            dummy=[]
+            if args.region_shap:
+                lines = space_lines(lines, feature_num) #it is smaller than 64, should be the same as feature_num
+            elif args.separation_shap:
+                lines = space_k_lines(lines, feature_num, 1)
         elif feature_mode == "global":
             lines = [6,21,20,17,47,5,4,24,37,23,32,27,35,2,53,41,16,11,49,59,56,51,50,52,10,54,63,62,57,60,61,64]
         lines = lines[-feature_num:]
