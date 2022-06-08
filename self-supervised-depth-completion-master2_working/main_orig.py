@@ -58,7 +58,7 @@ parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="all")
+parser.add_argument('--test_mode', default="shap")
 parser.add_argument('--feature_mode', default='local')
 parser.add_argument('--feature_num', default=32, type=int)
 
@@ -189,7 +189,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
                 else:
                     depth_new, alg_mode, feat_mode, features, shape = depth_adjustment(batch_data['d'], args.test_mode,args.feature_mode,args.feature_num,adjust_features, i, model_orig,args.seed)
             elif args.type_feature == "lines":
-                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(args, batch_data['d'], args.test_mode,args.feature_mode, args.feature_num,i, model_orig, sparse_depth_pathname, args.seed)
+                depth_new, alg_mode, feat_mode, features = depth_adjustment_lines(args, batch_data['d'], args.test_mode,args.feature_mode, args.feature_num,i, model_orig, filename, args.seed)
 
             batch_data['d'] = torch.Tensor(depth_new).unsqueeze(0).unsqueeze(1).to(device)
         data_time = time.time() - start
