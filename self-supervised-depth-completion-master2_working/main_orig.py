@@ -50,6 +50,7 @@ parser.add_argument('--val', type=str, default="select", choices=["select", "ful
 parser.add_argument('--jitter', type=float, default=0.1, help='color jitter for images')
 parser.add_argument('--rank-metric', type=str, default='rmse', choices=[m for m in dir(Result()) if not m.startswith('_')], help='metrics for which best result is sbatch_datacted')
 parser.add_argument('-m', '--train-mode', type=str, default="dense", choices=["dense", "sparse", "photo", "sparse+photo", "dense+photo"], help='dense | sparse | photo | sparse+photo | dense+photo')
+
 parser.add_argument('-e', '--evaluate', default='3', type=str, metavar='PATH')
 parser.add_argument('--record_eval_shap', default=0, type=int)
 parser.add_argument('--cpu', action="store_true", help='run on cpu')
@@ -60,7 +61,7 @@ parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--test_mode', default="shap")
 parser.add_argument('--feature_mode', default='local')
-parser.add_argument('--feature_num', default=32, type=int)
+parser.add_argument('--feature_num', default=40, type=int)
 
 parser.add_argument('--region_shap', default=0, type=int)
 parser.add_argument('--separation_shap', default=0, type=int)
@@ -320,6 +321,15 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     if args.record_eval_shap:
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
             file.write("\n" + ",".join([str(f) for f in features]) + ":" + "{:.3f}".format(avg.rmse))
+
+
+    # file write
+    date = datetime.datetime.now().strftime("%d/%m/%y")
+    os.makedirs("results", exist_ok=True)
+    filename = f"results/grad_results.csv"
+    file = open(filename, "a+")
+    file.write(f"{args.feature_num}, {args.test_mode}, {args.feature_mode}, {args.region_shap}, {args.separation_shap}, {avg.rmse:.3f}, ,{date}, , {args.evaluate}\n")
+    file.close()
 
     return avg, is_best
 
