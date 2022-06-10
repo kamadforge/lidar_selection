@@ -4,16 +4,28 @@ import os
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import math
-
+#global
 filename = "ranks/lines/global/shap/lines_shap.txt"
+# local
 filename = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/shap/lines_shap.txt"
+# global without repeating samples
 filename_clean = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/shap/lines_shap2.txt"
+#global case
+file_list=["lines_shap.txt"]
+path_list = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/global/shap/"
 
-path_list = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/"
-file_list = os.listdir(path_list)
+# local case
+# path_list = "/home/kamil/Dropbox/Current_research/depth_completion_opt/self-supervised-depth-completion-master2_working/ranks/lines/instance/shap/checkpoint_10_i_85000__best.pth.tar/"
+# file_list = os.listdir(path_list)
+# # local temporary file without repetitions
+# filename_clean = path_list + "temp.txt"# temp
+
+
+
+
 
 shapimp_dict={}
-filename_clean = path_list + "temp.txt"# temp
+#dic = {} # for global
 for filename in file_list:
     if ".txt" in filename:
         filepath = path_list + filename
@@ -36,7 +48,7 @@ for filename in file_list:
         file = open(filename_clean)
 
         # get the dictionary with key - the nodes in a subset, value: set value (the difference)
-        dic = {}
+        dic = {} # for local
         feat_num=65
         NOPRUNING_VAL = 11315
         for line in file:
@@ -55,8 +67,11 @@ for filename in file_list:
             f = math.factorial
             return f(n) / (f(k) * f(n-k))
 
+
         # compute the weights from the shapley regression, there is a weight for each data point
+        #dic contains binary vectors, with 0 for each feature that doens't belong, and 1 for where it belongs
         weights=[]
+        print("Keys in the dic: ", len(dic.keys()))
         for i in dic.keys():
             k = np.sum(i)
             val = (feat_num-1)/(nCr(feat_num, k)*k*(feat_num-k))
@@ -69,4 +84,7 @@ for filename in file_list:
         shapimp_dict[filename[:-4]]=shap_arr_sorted
         print(",".join([str(a) for a in shap_arr_sorted[-32:]]))
 
+# for lcoal dic of shap arg values for each file/grame
 np.save(path_list+"shapimp_dict.npy", shapimp_dict)
+# for global saving array
+#np.save(path_list+"shapimp_arr.npy", shap_arr)
