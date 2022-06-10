@@ -61,6 +61,7 @@ parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
 parser.add_argument('--test_mode', default="custom")
 parser.add_argument('--custom_lines', default="3,6,9")
+parser.add_argument("--lines_shap_sum", default=100, type=int)
 parser.add_argument('--feature_mode', default='global')
 parser.add_argument('--feature_num', default=1, type=int)
 
@@ -330,7 +331,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     os.makedirs("results", exist_ok=True)
     filename = f"results/grad_results.csv"
     file = open(filename, "a+")
-    file.write(f"{args.feature_num}, {args.test_mode}, {args.feature_mode}, {args.region_shap}, {args.separation_shap}, {avg.rmse:.3f}, {features_used} ,{date},  , {args.evaluate}\n")
+    file.write(f"{args.feature_num}, {args.test_mode}, {args.feature_mode}, {args.region_shap}, {args.separation_shap}, {avg.rmse:.3f}, {features_used} ,{date}, {args.lines_shap_sum} , {args.evaluate}\n")
     file.close()
 
     return avg, is_best

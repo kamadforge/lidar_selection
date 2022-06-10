@@ -26,7 +26,8 @@ for i in range(24):  # 64-16-24
         element = random.choice(lines)
         lines.remove(element)
 
-    print(np.sum([it[1] for it in lines]))
+    lines_shap_sum = str(int(np.sum([it[1] for it in lines])))
+    print(lines_shap_sum)
 
     lines_str = ",".join([str(it[0]) for it in lines])
     print(lines_str)
@@ -58,6 +59,6 @@ for i in range(24):  # 64-16-24
                 if 1:
                 #for num in range(1,65):
                     # feature_num=str(num)
-                    subprocess.run(["/home/kadamczewski/miniconda3/bin/python","/home/kadamczewski/Dropbox_from/Current_research/depth_completion/self-supervised-depth-completion-master2_working/main_orig.py", "--data-folder", "/is/cluster/scratch/kamil/kitti", "-e", "/home/kadamczewski/Dropbox_from/Current_research/depth_completion/results/train/2022_02_23_17:45_all_depth_scratch/mode=dense.input=gd.resnet18.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2022-02-23@17-46/checkpoint_10_i_85000__best.pth.tar", "--layers", "18", "--test_mode", method, "--feature_mode", mode, "--feature_num", feature_num, '--region_shap', "0", '--separation_shap', "0", "--custom_lines", lines])
+                    subprocess.run(["/home/kadamczewski/miniconda3/bin/python","/home/kadamczewski/Dropbox_from/Current_research/depth_completion/self-supervised-depth-completion-master2_working/main_orig.py", "--data-folder", "/is/cluster/scratch/kamil/kitti", "-e", "/home/kadamczewski/Dropbox_from/Current_research/depth_completion/results/train/2022_02_23_17:45_all_depth_scratch/mode=dense.input=gd.resnet18.criterion=l2.lr=1e-05.bs=1.wd=0.pretrained=False.jitter=0.1.time=2022-02-23@17-46/checkpoint_10_i_85000__best.pth.tar", "--layers", "18", "--test_mode", method, "--feature_mode", mode, "--feature_num", feature_num, '--region_shap', "0", '--separation_shap', "0", "--custom_lines", lines_str], "--lines_shap_sum", lines_shap_sum)
 
 
