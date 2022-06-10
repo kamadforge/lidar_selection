@@ -319,9 +319,10 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         print('\n' + '*' * 15 + '\n\n')
 
+    features_used = ",".join([str(f) for f in features])
     if args.record_eval_shap: #for global case
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
-            file.write("\n" + ",".join([str(f) for f in features]) + ":" + "{:.3f}".format(avg.rmse))
+            file.write("\n" + features_used + ":" + "{:.3f}".format(avg.rmse))
 
 
     # file write
@@ -329,7 +330,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
     os.makedirs("results", exist_ok=True)
     filename = f"results/grad_results.csv"
     file = open(filename, "a+")
-    file.write(f"{args.feature_num}, {args.test_mode}, {args.feature_mode}, {args.region_shap}, {args.separation_shap}, {avg.rmse:.3f}, ,{date}, , {args.evaluate}\n")
+    file.write(f"{args.feature_num}, {args.test_mode}, {args.feature_mode}, {args.region_shap}, {args.separation_shap}, {avg.rmse:.3f}, {features_used} ,{date},  , {args.evaluate}\n")
     file.close()
 
     return avg, is_best
