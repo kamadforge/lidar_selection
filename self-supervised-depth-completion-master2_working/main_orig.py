@@ -42,7 +42,7 @@ parser.add_argument('--lr', '--learning-rate', default=1e-5, type=float, metavar
 parser.add_argument('--weight-decay', '--wd', default=0, type=float, metavar='W', help='weight decay (default: 0)')
 parser.add_argument('--print-freq', '-p', default=10, type=int, metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
-parser.add_argument('--data-folder', default='../data', type=str, metavar='PATH', help='data folder (default: none)')
+parser.add_argument('--data-folder', default='/home/kamil/Dropbox/Current_research/data/kitti', type=str, metavar='PATH', help='data folder (default: none)')
 parser.add_argument('-i', '--input', type=str, default='gd', choices=input_options,help='input: | '.join(input_options))
 parser.add_argument('-l', '--layers', type=int, default=18, help='use 16 for sparse_conv; use 18 or 34 for resnet')
 parser.add_argument('--pretrained', action="store_true", help='use ImageNet pre-trained weights')
@@ -59,9 +59,10 @@ parser.add_argument('--sparse_depth_source', default='nonbin')
 parser.add_argument('--depth_save', default=1, type=int)
 parser.add_argument('--seed', default=120, type=int)
 parser.add_argument('--type_feature', default="lines", choices=["sq", "lines", "None"])
-parser.add_argument('--test_mode', default="shap")
-parser.add_argument('--feature_mode', default='local')
-parser.add_argument('--feature_num', default=40, type=int)
+parser.add_argument('--test_mode', default="custom")
+parser.add_argument('--custom_lines', default="3,6,9")
+parser.add_argument('--feature_mode', default='global')
+parser.add_argument('--feature_num', default=1, type=int)
 
 parser.add_argument('--region_shap', default=0, type=int)
 parser.add_argument('--separation_shap', default=0, type=int)
@@ -273,7 +274,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
             logger.conditional_save_img_comparison(mode, i, batch_data, pred, epoch)
             logger.conditional_save_pred(mode, i, pred, epoch)
 
-            if args.record_eval_shap:
+            if args.record_eval_shap: #for local case
                 with open(filepath, "a+") as file:
                     file.write("\n" + ",".join([str(f) for f in features]) + ":" + "{:.3f}".format(result.rmse))
 
@@ -318,7 +319,7 @@ def iterate(mode, args, loader, model, optimizer, logger, epoch):
 
         print('\n' + '*' * 15 + '\n\n')
 
-    if args.record_eval_shap:
+    if args.record_eval_shap: #for global case
         with open("ranks/lines/global/shap/lines_shap.txt", "a+") as file:
             file.write("\n" + ",".join([str(f) for f in features]) + ":" + "{:.3f}".format(avg.rmse))
 
